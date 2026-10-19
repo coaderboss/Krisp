@@ -16,6 +16,15 @@ model VerificationToken {
   @@unique([email, token])
 }
 
+model TwoFactorToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
 // User model for both Students and Club Admins
 model User {
   id            String    @id @default(cuid())
@@ -24,6 +33,7 @@ model User {
   password      String?   // Hashed password
   emailVerified DateTime?
   role          Role      @default(STUDENT)
+  isApproved    Boolean   @default(true) // Executives will have this set to false initially
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -63,6 +73,7 @@ model WeeklySlot {
 
 enum Role {
   STUDENT
+  EXECUTIVE
   CLUB_ADMIN
 }
 
@@ -72,4 +83,26 @@ enum AppStatus {
   SCREENING_DONE // Passed the communication test
   COMPLETED      // Video featured
   REJECTED
+}
+
+// --- DYNAMIC FORM BUILDER MODELS ---
+
+model FormField {
+  id          String    @id @default(cuid())
+  fieldName   String    // System name (e.g., "github_link", "semester")
+  fieldLabel  String    // Display name (e.g., "GitHub Profile Link", "Select Semester")
+  fieldType   FieldType // TEXT, DROPDOWN, FILE_UPLOAD
+  options     String[]  // Dropdown options (e.g., ["1st Sem", "2nd Sem", "3rd Sem"]) - Empty if TEXT/FILE
+  isRequired  Boolean   @default(true)
+  isActive    Boolean   @default(true) // Admin can hide a field without deleting it
+  orderIndex  Int       @default(0)    // To sort fields up and down in the form
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+enum FieldType {
+  TEXT
+  DROPDOWN
+  FILE_UPLOAD
 }

@@ -5,6 +5,7 @@ import { AuthError } from "next-auth";
 import prisma from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { sendVerificationEmail } from "@/lib/mail";
+import { sendTwoFactorTokenEmail } from "@/lib/mail";
 
 export async function registerStudent(formData: FormData) {
   const name = formData.get("name") as string;
@@ -80,24 +81,63 @@ export async function loginStudent(formData: FormData) {
   }
 }
 
-// ... baaki Admin Login ka code waisa hi rahega
+// Replace inside src/actions/auth.ts
 
-export async function loginAdmin(formData: FormData) {
+export async function generateAdminOTP(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  if (!email || !password) return { error: "Email aur Password dono zaroori hain!" };
+  if (!email || !password) return { error: "Both email and password are required to proceed." };
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || user.role !== "CLUB_ADMIN") {
-    return { error: "Access Denied: Ye account Club Admin nahi hai!" };
+    return { error: "Access Denied: This account lacks administrative privileges." };
   }
+
+  try {
+    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(new Date().getTime() + 10 * 60 * 1000); 
+
+    await prisma.twoFactorToken.deleteMany({ where: { email } });
+
+    await prisma.twoFactorToken.create({
+      data: { email, token, expires }
+    });
+
+    await sendTwoFactorTokenEmail(email, token);
+
+    return { success: true, message: "A secure verification code has been dispatched to your email." };
+  } catch (error) {
+    return { error: "Failed to dispatch the verification code. Please try again." };
+  }
+}
+
+export async function verifyAdminOTPAndLogin(formData: FormData) {
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  const otp = formData.get("otp") as string;
+
+  if (!otp) return { error: "A verification code is required." };
+
+  const existingToken = await prisma.twoFactorToken.findFirst({
+    where: { email, token: otp }
+  });
+
+  if (!existingToken) {
+    return { error: "The provided verification code is invalid." };
+  }
+
+  if (new Date(existingToken.expires) < new Date()) {
+    return { error: "The verification code has expired. Please request a new one." };
+  }
+
+  await prisma.twoFactorToken.delete({ where: { id: existingToken.id } });
 
   try {
     await signIn("credentials", { email, password, redirectTo: "/admin" });
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: "Email ya password galat hai!" };
+      return { error: "Final authentication phase failed. Please verify your credentials." };
     }
     throw error;
   }

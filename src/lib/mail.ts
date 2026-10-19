@@ -28,3 +28,29 @@ export const sendVerificationEmail = async (email: string, token: string) => {
     `,
   });
 };
+
+export const sendTwoFactorTokenEmail = async (email: string, token: string) => {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.GMAIL_EMAIL,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
+
+  await transporter.sendMail({
+    from: `"Cybersecurity Club Admin Security" <${process.env.GMAIL_EMAIL}>`,
+    to: email,
+    subject: "🔒 2FA Code - Admin Portal Access",
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #0F2547;">
+        <h2>Admin Authentication Required</h2>
+        <p>Aapke Club Admin portal mein login karne ke liye Two-Factor Authentication code niche diya gaya hai:</p>
+        <div style="margin: 20px 0; padding: 15px; background-color: #F1F5F9; border-radius: 8px; text-align: center;">
+          <h1 style="letter-spacing: 5px; color: #2563EB; margin: 0;">${token}</h1>
+        </div>
+        <p style="font-size: 12px; color: #64748B;">Yeh code 10 minute mein expire ho jayega. Agar yeh request aapne nahi ki hai, toh turant apna password change karein.</p>
+      </div>
+    `,
+  });
+};
