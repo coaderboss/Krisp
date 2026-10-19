@@ -10,7 +10,15 @@ import { sendTwoFactorTokenEmail } from "@/lib/mail";
 export async function registerStudent(formData: FormData) {
   const name = formData.get("name") as string;
   const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+ const password = formData.get("password") as string;
+
+  // Strong Password Check: Min 8, Max 25 chars, 1 Uppercase, 1 Special Char
+  const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,25}$/;
+  if (!strongPasswordRegex.test(password)) {
+    return { 
+      error: "Password 8 se 25 characters ke beech hona chahiye, jisme 1 Capital Letter aur 1 Special Character (!@#$&*) zaroori hai." 
+    };
+  }
 
   if (!name || !email || !password) return { error: "All fields are required!" };
 

@@ -49,14 +49,16 @@ model Application {
   id              String         @id @default(cuid())
   userId          String
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course          String         // e.g., B.Tech CSE, BCA
-  semester        String
-  topicInterested String         // Topic student wants to present
-  pastExperience  String?        // Any past speaking experience
+  course          String?        // Made Optional
+  semester        String?        // Made Optional
+  topicInterested String         @default("Dynamic Topic") 
+  pastExperience  String?        
+  dynamicData     String?        // NAYA FIELD: Form ka saara data yahan aayega
   status          AppStatus      @default(WAITING)
   appliedAt       DateTime       @default(now())
+  hasNudged       Boolean        @default(false)
+  nudgeDate       DateTime?
 
-  // Relation to weekly slots if selected
   weeklySlot      WeeklySlot?    @relation(fields: [weeklySlotId], references: [id])
   weeklySlotId    String?
 }
@@ -107,6 +109,7 @@ enum FieldType {
   TEXT
   DROPDOWN
   FILE_UPLOAD
+  CHECKBOX
 }
 
 // --- EXECUTIVE ACTION REQUESTS ---

@@ -52,9 +52,8 @@ export default function SettingsTab() {
     type: "success" | "error";
   } | null>(null);
 
-  const [settingsSubTab, setSettingsSubTab] = useState<"BUILDER" | "RESPONSES">(
-    "BUILDER",
-  );
+  const [settingsSubTab, setSettingsSubTab] = useState<"BUILDER" | "PUBLISHED" | "RESPONSES">("BUILDER");
+  const [publishedFields, setPublishedFields] = useState<FormField[]>([]);
 
   const [formTitle, setFormTitle] = useState("Weekly Bulletin Registration");
   const [formDescription, setFormDescription] = useState(
@@ -66,7 +65,6 @@ export default function SettingsTab() {
     PendingExecutive[]
   >([]);
 
-  // SECURE: Blank array for real database data (No more dummy data)
   const [studentResponses, setStudentResponses] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
@@ -78,20 +76,25 @@ export default function SettingsTab() {
   // --- FETCH 100% REAL DATA ON LOAD ---
   useEffect(() => {
     async function loadData() {
-      // 1. Load Form Fields
+      // 1. Load Form Fields (For both Published and Builder)
       const fieldsRes = await getFormFields();
       if (fieldsRes.success && fieldsRes.data) {
-        const loadedFields = fieldsRes.data.map((f) => ({
+        const loadedFields = fieldsRes.data.map((f: any) => ({
           id: f.id,
           fieldName: f.fieldName,
           fieldLabel: f.fieldLabel,
           fieldType: f.fieldType as FieldType,
-          options: f.options,
+          options: f.options || [],
           isRequired: f.isRequired,
-          wordLimit: (f as any).wordLimit || 0,
+          wordLimit: f.wordLimit || 0,
         }));
 
-        if (loadedFields.length === 0) {
+        if (loadedFields.length > 0) {
+          // Database me data hai, dono ko update karo
+          setPublishedFields(loadedFields);
+          setFormFields(loadedFields); 
+        } else {
+          // Agar DB khaali hai toh Builder me ek default field do
           setFormFields([
             {
               id: "temp_1",
@@ -102,8 +105,6 @@ export default function SettingsTab() {
               isRequired: true,
             },
           ]);
-        } else {
-          setFormFields(loadedFields);
         }
       }
 
@@ -119,8 +120,11 @@ export default function SettingsTab() {
           name: app.user?.name || "Unknown User",
           email: app.user?.email || "No Email",
           topic: app.topicInterested || "Not Selected",
-          document: "Pending Upload", // Update this when file upload logic is added
+          document: "Pending Upload", 
           date: new Date(app.appliedAt).toLocaleDateString(),
+          // BUGS FIXED: Naye fields UI state mein pass kar diye!
+          dynamicData: app.dynamicData, 
+          description: app.description
         }));
         setStudentResponses(realData);
       }
@@ -190,8 +194,13 @@ export default function SettingsTab() {
   async function saveFormStructure() {
     setLoading("save-form");
     const res = await saveFormFields(formFields);
-    if (res.error) notify(res.error, "error");
-    else notify(res.message || "Form successfully published to DB!");
+    if (res.error) {
+      notify(res.error, "error");
+    } else {
+      notify(res.message || "Form successfully published to DB!");
+      setPublishedFields([...formFields]); // Update published view instantly
+      setSettingsSubTab("PUBLISHED"); // Redirect to Published Tab
+    }
     setLoading("");
   }
 
@@ -346,7 +355,13 @@ export default function SettingsTab() {
               onClick={() => setSettingsSubTab("BUILDER")}
               className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${settingsSubTab === "BUILDER" ? "bg-white shadow text-blue-700" : "text-slate-500"}`}
             >
-              Form Builder
+              Draft / Edit Form
+            </button>
+            <button
+              onClick={() => setSettingsSubTab("PUBLISHED")}
+              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${settingsSubTab === "PUBLISHED" ? "bg-white shadow text-blue-700" : "text-slate-500"}`}
+            >
+              Live Published Form
             </button>
             <button
               onClick={() => setSettingsSubTab("RESPONSES")}
@@ -547,6 +562,67 @@ export default function SettingsTab() {
           </div>
         )}
 
+        {/* --- LIVE PUBLISHED FORM TAB --- */}
+        {settingsSubTab === "PUBLISHED" && (
+          <div className="space-y-6 animate-in fade-in">
+            <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-center justify-between">
+              <div>
+                <h3 className="text-emerald-800 font-bold text-sm flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" /> This is the Live Form
+                </h3>
+                <p className="text-emerald-600 text-xs mt-1">Students are seeing this exact structure on their portal right now.</p>
+              </div>
+            </div>
+
+            <div className="clay-card p-6 sm:p-10 pointer-events-none opacity-90">
+              <div className="border-b border-slate-200/80 pb-5 mb-6">
+                <h2 className="text-2xl font-extrabold text-[#0F2547]">{formTitle}</h2>
+                <p className="text-sm text-slate-500 mt-1">{formDescription}</p>
+              </div>
+
+              <div className="space-y-6">
+                {publishedFields.length > 0 ? publishedFields.map((field) => (
+                  <div key={field.id}>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 ml-1">
+                      {field.fieldLabel} {field.isRequired && <span className="text-red-500">*</span>}
+                    </label>
+
+                    {field.fieldType === "TEXT" && (
+                      <input type="text" disabled className="clay-input w-full px-4 py-3.5 text-sm font-medium bg-slate-50" placeholder="Type your answer..." />
+                    )}
+
+                    {field.fieldType === "DROPDOWN" && (
+                      <select disabled className="clay-input w-full px-4 py-3.5 text-sm font-medium bg-slate-50">
+                        <option value="">Select an option...</option>
+                        {field.options.map((opt, i) => <option key={i} value={opt}>{opt}</option>)}
+                      </select>
+                    )}
+
+                    {field.fieldType === "CHECKBOX" && (
+                      <div className="space-y-3 mt-3">
+                        {field.options.map((opt, i) => (
+                          <label key={i} className="flex items-center gap-3">
+                            <input type="checkbox" disabled className="w-5 h-5 text-blue-600 bg-slate-100 border-slate-300 rounded" />
+                            <span className="text-sm font-medium text-slate-500">{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+
+                    {field.fieldType === "FILE_UPLOAD" && (
+                      <div className="clay-inset p-4 rounded-xl border border-slate-200 border-dashed bg-slate-50">
+                        <input type="file" disabled className="block w-full text-sm text-slate-400" />
+                      </div>
+                    )}
+                  </div>
+                )) : (
+                  <p className="text-slate-400 text-sm italic">No form published yet.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* --- VIEW RESPONSES TAB --- */}
         {settingsSubTab === "RESPONSES" && (
           <div className="space-y-6 animate-in fade-in">
@@ -617,22 +693,23 @@ export default function SettingsTab() {
             </div>
           </div>
         )}
+        
         {/* --- STUDENT DETAILS POPUP MODAL --- */}
         {selectedStudent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto clay-card">
               <div className="sticky top-0 bg-white/90 backdrop-blur-md p-5 border-b border-slate-100 flex items-center justify-between z-10">
                 <div>
                   <h3 className="text-xl font-extrabold text-[#0F2547]">
-                    {selectedStudent.name}
+                    {selectedStudent.name || selectedStudent.user?.name || "Unknown"}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    {selectedStudent.email}
+                    {selectedStudent.email || selectedStudent.user?.email || "No email"}
                   </p>
                 </div>
                 <button
                   onClick={() => setSelectedStudent(null)}
-                  className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors"
+                  className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors font-bold"
                 >
                   ✕
                 </button>
@@ -646,7 +723,7 @@ export default function SettingsTab() {
                       Selected Topic
                     </span>
                     <p className="text-sm font-bold text-blue-700 mt-1">
-                      {selectedStudent.topic}
+                      {selectedStudent.topic || selectedStudent.topicInterested}
                     </p>
                   </div>
                   <div className="clay-inset p-4 rounded-xl">
@@ -654,38 +731,46 @@ export default function SettingsTab() {
                       Applied On
                     </span>
                     <p className="text-sm font-bold text-slate-700 mt-1">
-                      {selectedStudent.date}
+                      {selectedStudent.date || new Date(selectedStudent.appliedAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
 
-                {/* Detailed Form Fields (Dynamic Data Map) */}
+                {/* --- REAL DYNAMIC FORM FIELDS MAPPING --- */}
                 <div>
                   <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 border-b pb-2">
                     Full Application Details
                   </h4>
                   <div className="space-y-4">
-                    {/* Jab real dynamic data aayega, yahan map karenge. Example layout: */}
-                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                      <span className="text-[10px] font-bold text-slate-500">
-                        Why do you want to join?
-                      </span>
-                      <p className="text-xs text-slate-700 mt-1.5 leading-relaxed">
-                        {selectedStudent.description ||
-                          "Student description will appear here securely."}
-                      </p>
-                    </div>
+                    {(() => {
+                      // Attempt to parse dynamic JSON data
+                      let parsedData = {};
+                      try {
+                        const rawData = selectedStudent.description || selectedStudent.dynamicData;
+                        parsedData = typeof rawData === 'string' ? JSON.parse(rawData) : {};
+                      } catch (e) {
+                        parsedData = { "Raw Input": selectedStudent.description || "No data provided." };
+                      }
 
-                    <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                      <span className="text-[10px] font-bold text-slate-500">
-                        Attached Documents
-                      </span>
-                      <p className="text-xs text-emerald-600 font-bold mt-1.5 flex items-center gap-1.5">
-                        📄 {selectedStudent.document}
-                      </p>
-                    </div>
+                      // Filter out empty or hidden fields (like Next.js action tokens)
+                      const entries = Object.entries(parsedData).filter(([key, value]) => !key.startsWith('$ACTION_'));
+
+                      if (entries.length === 0) {
+                        return <p className="text-sm text-slate-500 italic">No additional details submitted.</p>;
+                      }
+
+                      return entries.map(([key, value], index) => (
+                        <div key={index} className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">{key}</span>
+                          <p className="text-xs text-slate-800 mt-1.5 leading-relaxed font-medium">
+                            {Array.isArray(value) ? value.join(", ") : String(value)}
+                          </p>
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </div>
+
               </div>
             </div>
           </div>

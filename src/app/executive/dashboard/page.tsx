@@ -46,8 +46,22 @@ export default function ExecutiveDashboard() {
         const slotData = await getOrCreateCurrentSlot();
         setSlot(slotData);
         
-        const appsRes = await fetchAllApplications();
-        if (appsRes.success && appsRes.data) setApplications(appsRes.data);
+        // 3. Load Real Student Responses from Database
+      const appsRes = await fetchAllApplications();
+      if (appsRes.success && appsRes.data) {
+        const realData = appsRes.data.map((app: any) => ({
+          id: app.id,
+          name: app.user?.name || "Unknown User",
+          email: app.user?.email || "No Email",
+          topic: app.topicInterested || "Not Selected",
+          document: "Pending Upload", 
+          date: new Date(app.appliedAt).toLocaleDateString(),
+          // BUGS FIXED: Naye fields UI state mein pass kar diye!
+          dynamicData: app.dynamicData, 
+          description: app.description
+        }));
+        setStudentResponses(realData);
+      }
 
         const fieldsRes = await getFormFields();
         if (fieldsRes.success && fieldsRes.data) {
@@ -443,56 +457,86 @@ export default function ExecutiveDashboard() {
         </section>
       )}
       {/* --- STUDENT DETAILS POPUP MODAL --- */}
-      {selectedStudent && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto clay-card">
-            <div className="sticky top-0 bg-white/90 backdrop-blur-md p-5 border-b border-slate-100 flex items-center justify-between z-10">
-              <div>
-                <h3 className="text-xl font-extrabold text-[#0F2547]">{selectedStudent.user?.name || "Unknown"}</h3>
-                <p className="text-xs text-slate-500">{selectedStudent.user?.email || "No email"}</p>
-              </div>
-              <button 
-                onClick={() => setSelectedStudent(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors font-bold"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="clay-inset p-4 rounded-xl">
-                  <span className="text-[10px] font-black text-slate-400 uppercase">Selected Topic</span>
-                  <p className="text-sm font-bold text-blue-700 mt-1">{selectedStudent.topicInterested}</p>
+        {selectedStudent && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto clay-card">
+              <div className="sticky top-0 bg-white/90 backdrop-blur-md p-5 border-b border-slate-100 flex items-center justify-between z-10">
+                <div>
+                  <h3 className="text-xl font-extrabold text-[#0F2547]">
+                    {selectedStudent.name || selectedStudent.user?.name || "Unknown"}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {selectedStudent.email || selectedStudent.user?.email || "No email"}
+                  </p>
                 </div>
-                <div className="clay-inset p-4 rounded-xl">
-                  <span className="text-[10px] font-black text-slate-400 uppercase">Status</span>
-                  <p className="text-sm font-bold text-slate-700 mt-1">{selectedStudent.status}</p>
-                </div>
+                <button
+                  onClick={() => setSelectedStudent(null)}
+                  className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors font-bold"
+                >
+                  ✕
+                </button>
               </div>
 
-              <div>
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 border-b pb-2">Full Application Details</h4>
-                <div className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <span className="text-[10px] font-bold text-slate-500">Why do you want to join? (Description)</span>
-                    <p className="text-xs text-slate-700 mt-1.5 leading-relaxed">
-                      {selectedStudent.description || "No description provided by the student."}
+              <div className="p-6 space-y-6">
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="clay-inset p-4 rounded-xl">
+                    <span className="text-[10px] font-black text-slate-400 uppercase">
+                      Selected Topic
+                    </span>
+                    <p className="text-sm font-bold text-blue-700 mt-1">
+                      {selectedStudent.topic || selectedStudent.topicInterested}
                     </p>
                   </div>
-                  
-                  <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                    <span className="text-[10px] font-bold text-slate-500">Attached Documents</span>
-                    <p className="text-xs text-emerald-600 font-bold mt-1.5 flex items-center gap-1.5">
-                      📄 {selectedStudent.documentUrl || "No document uploaded"}
+                  <div className="clay-inset p-4 rounded-xl">
+                    <span className="text-[10px] font-black text-slate-400 uppercase">
+                      Applied On
+                    </span>
+                    <p className="text-sm font-bold text-slate-700 mt-1">
+                      {selectedStudent.date || new Date(selectedStudent.appliedAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
+
+                {/* --- REAL DYNAMIC FORM FIELDS MAPPING --- */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 border-b pb-2">
+                    Full Application Details
+                  </h4>
+                  <div className="space-y-4">
+                    {(() => {
+                      // Attempt to parse dynamic JSON data
+                      let parsedData = {};
+                      try {
+                        const rawData = selectedStudent.description || selectedStudent.dynamicData;
+                        parsedData = typeof rawData === 'string' ? JSON.parse(rawData) : {};
+                      } catch (e) {
+                        parsedData = { "Raw Input": selectedStudent.description || "No data provided." };
+                      }
+
+                      // Filter out empty or hidden fields (like Next.js action tokens)
+                      const entries = Object.entries(parsedData).filter(([key, value]) => !key.startsWith('$ACTION_'));
+
+                      if (entries.length === 0) {
+                        return <p className="text-sm text-slate-500 italic">No additional details submitted.</p>;
+                      }
+
+                      return entries.map(([key, value], index) => (
+                        <div key={index} className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">{key}</span>
+                          <p className="text-xs text-slate-800 mt-1.5 leading-relaxed font-medium">
+                            {Array.isArray(value) ? value.join(", ") : String(value)}
+                          </p>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
     </div>
   );

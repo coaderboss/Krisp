@@ -1,29 +1,29 @@
 "use client";
 import { useState } from "react";
 import { registerStudent, loginStudent } from "@/actions/auth";
-import { Sparkles, ShieldCheck } from "lucide-react";
+import { Sparkles, ShieldCheck, User, Mail, Lock, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<{text: string, type: "error" | "success"} | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    setMessage("Processing...");
+    setMessage(null);
     
     const formData = new FormData(e.currentTarget);
 
     if (isLogin) {
       const res = await loginStudent(formData);
-      if (res?.error) setMessage(res.error);
+      if (res?.error) setMessage({ text: res.error, type: "error" });
     } else {
       const res = await registerStudent(formData);
       if (res?.error) {
-        setMessage(res.error);
+        setMessage({ text: res.error, type: "error" });
       } else {
-        setMessage("Registration successful! Ab aap login kar sakte hain.");
+        setMessage({ text: "Registration successful! Ab aap login kar sakte hain.", type: "success" });
         setIsLogin(true);
       }
     }
@@ -31,52 +31,73 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto mt-10">
-      <div className="clay-card p-8">
-        <div className="flex justify-center mb-4">
-          <div className="w-14 h-14 rounded-2xl clay-soft-blue flex items-center justify-center">
-            {isLogin ? <ShieldCheck className="w-8 h-8 text-blue-600" /> : <Sparkles className="w-8 h-8 text-amber-500" />}
+    <div className="min-h-[80vh] flex items-center justify-center px-4">
+      <div className="max-w-md w-full clay-card p-8 sm:p-10 animate-in fade-in zoom-in duration-500">
+        
+        <div className="flex justify-center mb-6">
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg transition-colors duration-300 ${isLogin ? "clay-navy" : "bg-amber-100"}`}>
+            {isLogin ? <ShieldCheck className="w-8 h-8 text-blue-400" /> : <Sparkles className="w-8 h-8 text-amber-500" />}
           </div>
         </div>
         
-        <h2 className="text-2xl font-extrabold text-[#0F2547] text-center mb-6">
-          {isLogin ? "Student Login" : "Register Account"}
-        </h2>
+        <div className="text-center mb-8 space-y-1">
+          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${isLogin ? "clay-badge-blue" : "clay-badge-amber"}`}>
+            Student Portal
+          </span>
+          <h2 className="text-2xl font-extrabold text-[#0F2547]">
+            {isLogin ? "Secure Login" : "Create Account"}
+          </h2>
+        </div>
 
         {message && (
-          <div className="mb-5 p-3 rounded-xl bg-blue-100 text-blue-800 text-sm font-semibold text-center border border-blue-200">
-            {message}
+          <div className={`mb-6 p-3.5 rounded-xl text-xs font-bold text-center border transition-all ${message.type === "success" ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"}`}>
+            {message.text}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Full Name</label>
-              <input type="text" name="name" required className="clay-input w-full px-4 py-3 text-sm" placeholder="e.g. Deepak Kumar" />
+            <div className="animate-in slide-in-from-top-2">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Full Name</label>
+              <div className="relative">
+                <User className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+                <input type="text" name="name" required className="clay-input w-full pl-10 pr-4 py-3 text-sm font-bold text-slate-800" placeholder="Deepak Kumar" />
+              </div>
             </div>
           )}
+          
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Email Address</label>
-            <input type="email" name="email" required className="clay-input w-full px-4 py-3 text-sm" placeholder="student@csjmu.ac.in" />
+            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Email Address</label>
+            <div className="relative">
+              <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+              <input type="email" name="email" required className="clay-input w-full pl-10 pr-4 py-3 text-sm font-bold text-slate-800" placeholder="student@csjmu.ac.in" />
+            </div>
           </div>
+          
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-1.5 ml-1">Password</label>
-            <input type="password" name="password" required className="clay-input w-full px-4 py-3 text-sm" placeholder="••••••••" />
+            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Password</label>
+            <div className="relative">
+              <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+              <input type="password" name="password" required className="clay-input w-full pl-10 pr-4 py-3 text-sm font-bold text-slate-800" placeholder="••••••••" />
+            </div>
           </div>
 
-          <button type="submit" disabled={loading} className="clay-btn-primary w-full py-3.5 mt-2 text-sm uppercase tracking-wider">
-            {loading ? "Please wait..." : (isLogin ? "Secure Login" : "Create Account")}
+          <button type="submit" disabled={loading} className="clay-btn-primary w-full py-4 mt-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md">
+            {loading ? "Processing..." : (isLogin ? "Enter Portal" : "Complete Registration")}
+            {!loading && <ArrowRight className="w-4 h-4" />}
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-200 text-center">
+        <div className="mt-8 pt-5 border-t border-slate-200/80 text-center">
+          <p className="text-xs text-slate-500 font-medium mb-1.5">
+            {isLogin ? "Don't have an account yet?" : "Already registered?"}
+          </p>
           <button 
             type="button" 
-            onClick={() => { setIsLogin(!isLogin); setMessage(""); }} 
-            className="text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors"
+            onClick={() => { setIsLogin(!isLogin); setMessage(null); }} 
+            className="text-xs font-extrabold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-wider"
           >
-            {isLogin ? "New student? Create an account here" : "Already registered? Login here"}
+            {isLogin ? "Create Student Account ➔" : "⬅ Back to Login"}
           </button>
         </div>
       </div>
