@@ -2,7 +2,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { AppStatus } from "@prisma/client";
 
 // Guard: Only CLUB_ADMIN can run these actions
@@ -181,8 +181,15 @@ export async function sendInvitesToShortlisted(slotId: string) {
     return { error: "Invites bhejne ke liye koi shortlisted presenter nahi hai." };
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const resend = apiKey ? new Resend(apiKey) : null;
+  // Gmail SMTP Server connect karna
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.GMAIL_EMAIL,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
+
   const emailsSent = [];
 
   for (const trainee of slot.selectedTrainees) {
@@ -190,13 +197,13 @@ export async function sendInvitesToShortlisted(slotId: string) {
     const studentName = trainee.user.name;
     const topic = trainee.topicInterested;
 
-    if (resend) {
-      try {
-        await resend.emails.send({
-          from: "Cybersecurity Club UIET <bulletin@resend.dev>",
-          to: studentEmail,
-          subject: "🎉 You have been Shortlisted! Weekly Video Bulletin Screening Call",
-          html: `
+    try {
+      await transporter.sendMail({
+        from: `"Cybersecurity Club CSJMU" <${process.env.GMAIL_EMAIL}>`,
+        to: studentEmail,
+        subject: "🎉 You have been Shortlisted! Weekly Video Bulletin Screening Call",
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #0F2547;">
             <h2>Hello ${studentName},</h2>
             <p>Congratulations! Aapko hamare <strong>Weekly Cybersecurity Video Bulletin</strong> ke liye shortlist kiya gaya hai.</p>
             <p><strong>Your Topic:</strong> ${topic}</p>
@@ -204,15 +211,12 @@ export async function sendInvitesToShortlisted(slotId: string) {
             <p>Kripya apne topic par 3-4 slides taiyaar rakhein.</p>
             <br/>
             <p>Best regards,<br/><strong>Cybersecurity Club • UIET CSJM University</strong></p>
-          `,
-        });
-        emailsSent.push(studentEmail);
-      } catch (err) {
-        console.error("Resend error for:", studentEmail, err);
-      }
-    } else {
-      // Graceful simulation when API key is pending
+          </div>
+        `,
+      });
       emailsSent.push(studentEmail);
+    } catch (err) {
+      console.error("Nodemailer error for:", studentEmail, err);
     }
   }
 
@@ -220,10 +224,7 @@ export async function sendInvitesToShortlisted(slotId: string) {
   return { 
     success: true, 
     count: emailsSent.length,
-    simulated: !apiKey,
-    message: apiKey 
-      ? `${emailsSent.length} students ko official screening invites email kar diye gaye!`
-      : `${emailsSent.length} students ke liye invites simulate ho gaye (Resend API Key set karein live email delivery ke liye).`
+    message: `${emailsSent.length} students ko official screening invites email kar diye gaye!`
   };
 }
 
