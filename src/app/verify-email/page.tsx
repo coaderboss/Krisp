@@ -1,16 +1,13 @@
 import { PrismaClient } from "@prisma/client";
-import { XCircle, CheckCircle } from "lucide-react";
+import { XCircle, CheckCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { connection } from "next/server"; // Next.js 15 server connection utility
+import { Suspense } from "react";
+import { connection } from "next/server";
 
 const prisma = new PrismaClient();
 
-export default async function VerifyEmailPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ token: string }>;
-}) {
-  // This tells Next.js to treat this page dynamically and prevents the prerendering error
+// 1. The Core Server Component that handles the Database Logic
+async function VerificationLogic({ searchParams }: { searchParams: Promise<{ token: string }> }) {
   await connection();
   
   const params = await searchParams;
@@ -63,5 +60,26 @@ export default async function VerifyEmailPage({
         Proceed to Login
       </Link>
     </div>
+  );
+}
+
+// 2. The Default Page Component wrapped in a Suspense Boundary
+export default function VerifyEmailPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token: string }>;
+}) {
+  return (
+    <Suspense 
+      fallback={
+        <div className="max-w-md mx-auto mt-20 p-8 clay-card text-center flex flex-col items-center">
+          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+          <h2 className="text-xl font-bold text-[#0F2547]">Verifying Email...</h2>
+          <p className="text-sm text-slate-500 mt-2">Please wait while we check your secure token.</p>
+        </div>
+      }
+    >
+      <VerificationLogic searchParams={searchParams} />
+    </Suspense>
   );
 }
