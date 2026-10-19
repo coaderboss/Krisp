@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model VerificationToken {
+  id      String   @id @default(cuid())
+  email   String
+  token   String   @unique
+  expires DateTime
+
+  @@unique([email, token])
+}
+
+// User model for both Students and Club Admins
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String?   // Hashed password
+  emailVerified DateTime?
+  role          Role      @default(STUDENT)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Student relation to their program applications
+  applications  Application[]
+}
+
+// Presenter Program Enrollment Application
+model Application {
+  id              String         @id @default(cuid())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course          String         // e.g., B.Tech CSE, BCA
+  semester        String
+  topicInterested String         // Topic student wants to present
+  pastExperience  String?        // Any past speaking experience
+  status          AppStatus      @default(WAITING)
+  appliedAt       DateTime       @default(now())
+
+  // Relation to weekly slots if selected
+  weeklySlot      WeeklySlot?    @relation(fields: [weeklySlotId], references: [id])
+  weeklySlotId    String?
+}
+
+// Weekly Bulletin Slot (Manages the 2 students per week logic)
+model WeeklySlot {
+  id             String        @id @default(cuid())
+  weekStartDate  DateTime
+  weekEndDate    DateTime
+  theme          String?       // E.g., "Network Security Week"
+  isPublished    Boolean       @default(false)
+  
+  // The 2 students selected for this week
+  selectedTrainees Application[]
+}
+
+enum Role {
+  STUDENT
+  CLUB_ADMIN
+}
+
+enum AppStatus {
+  WAITING        // In the queue
+  SHORTLISTED    // Selected by Auto-Queue or Manual PnC
+  SCREENING_DONE // Passed the communication test
+  COMPLETED      // Video featured
+  REJECTED
+}
