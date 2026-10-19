@@ -8,13 +8,15 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showOTP, setShowOTP] = useState(false); // UI State toggle
+  const [showOTP, setShowOTP] = useState(false);
 
-  // Temporary storage for credentials to pass to the next step
+  // SECURE: Blank initial state (Fixes React Uncontrolled Error & Password Leak)
   const [credentials, setCredentials] = useState({
-    email: "admin@csjmu.ac.in",
-    password: "admin@cyber2026",
+    email: "",
+    password: "",
   });
+
+  const [otpValue, setOtpValue] = useState("");
 
   async function handleInitialSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -39,10 +41,10 @@ export default function AdminLoginPage() {
     setError("");
     setSuccess("");
 
-    const formData = new FormData(e.currentTarget);
-    // Hidden fields se credentials waapas attach karna
+    const formData = new FormData();
     formData.append("email", credentials.email);
     formData.append("password", credentials.password);
+    formData.append("otp", otpValue); // Exact OTP value passing
 
     const res = await verifyAdminOTPAndLogin(formData);
     if (res?.error) {
@@ -64,111 +66,67 @@ export default function AdminLoginPage() {
           <span className="clay-badge-amber text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-block">
             Restricted Access
           </span>
-          <h2 className="text-2xl font-extrabold text-[#0F2547]">
-            Club Admin Portal
-          </h2>
-          <p className="text-xs text-slate-500 font-medium">
-            Authorized Personnel • Cybersecurity Club UIET
-          </p>
+          <h2 className="text-2xl font-extrabold text-[#0F2547]">Club Admin Portal</h2>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold text-center border border-red-200">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold text-center border border-emerald-200">
-            {success}
-          </div>
-        )}
+        {error && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold text-center border border-red-200">{error}</div>}
+        {success && <div className="mb-4 p-3 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold text-center border border-emerald-200">{success}</div>}
 
         {!showOTP ? (
           <form onSubmit={handleInitialSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1 ml-1">
-                Admin Email ID
-              </label>
+              <label className="block text-xs font-bold text-slate-700 mb-1 ml-1">Admin Email ID</label>
               <input
                 type="email"
                 name="email"
                 required
-                value={credentials.email || ""}
-                onChange={(e) =>
-                  setCredentials({ ...credentials, email: e.target.value })
-                }
+                value={credentials.email}
+                onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
                 className="clay-input w-full px-4 py-3 text-sm"
+                autoComplete="off"
               />
             </div>
-
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1 ml-1">
-                Admin Password
-              </label>
+              <label className="block text-xs font-bold text-slate-700 mb-1 ml-1">Admin Password</label>
               <input
                 type="password"
                 name="password"
                 required
-                value={credentials.password || ""}
-                onChange={(e) =>
-                  setCredentials({ ...credentials, password: e.target.value })
-                }
+                value={credentials.password}
+                onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                 className="clay-input w-full px-4 py-3 text-sm"
+                autoComplete="new-password"
               />
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="clay-btn-primary w-full py-3.5 mt-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2"
-            >
+            <button type="submit" disabled={loading} className="clay-btn-primary w-full py-3.5 mt-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2">
               <Lock className="w-4 h-4" />
-              <span>
-                {loading ? "Authenticating..." : "Request Access (2FA)"}
-              </span>
+              <span>{loading ? "Authenticating..." : "Request Access (2FA)"}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
         ) : (
           <form onSubmit={handleOTPSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1 ml-1 text-center">
-                Enter 6-Digit Verification Code
-              </label>
+              <label className="block text-xs font-bold text-slate-700 mb-1 ml-1 text-center">Enter 6-Digit Code</label>
               <input
                 type="text"
-                name="otp"
+                name="secure-otp-code" // Changed name to prevent browser email autofill
                 required
                 maxLength={6}
-                autoComplete="one-time-code" // This strictly forces browsers to expect an OTP, not an email
+                value={otpValue}
+                onChange={(e) => setOtpValue(e.target.value)}
+                autoComplete="off" // Prevents autofill popups
                 className="clay-input w-full px-4 py-3 text-2xl tracking-[0.5em] text-center font-black text-blue-800"
                 placeholder="------"
                 autoFocus
               />
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="clay-btn-primary w-full py-3.5 mt-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2"
-            >
+            <button type="submit" disabled={loading} className="clay-btn-primary w-full py-3.5 mt-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2">
               <KeyRound className="w-4 h-4" />
-              <span>
-                {loading ? "Verifying Token..." : "Verify & Enter Portal"}
-              </span>
+              <span>{loading ? "Verifying..." : "Verify & Enter Portal"}</span>
             </button>
           </form>
         )}
-
-        <div className="mt-6 pt-4 border-t border-slate-200/80 text-center">
-          <Link
-            href="/"
-            className="text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors"
-          >
-            ← Return to Program Home
-          </Link>
-        </div>
       </div>
     </div>
   );

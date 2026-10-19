@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, UserCheck, Video, Lock } from "lucide-react";
+import { Sparkles, UserCheck, Shield, Lock } from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function Navbar() {
   return (
     <header className="sticky top-3 z-50 px-3 sm:px-6">
       <div className="max-w-7xl mx-auto clay-card px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-lg">
-        {/* Brand Identity with Official Club Logo (Normal Home Link) */}
+        {/* Brand Identity with Official Club Logo */}
         <Link href="/" className="flex items-center gap-3 group">
           <div className="w-12 h-12 rounded-2xl clay-pill p-1 flex items-center justify-center shrink-0 shadow-md overflow-hidden bg-white/80 group-hover:scale-105 transition-transform">
             <Image
@@ -43,7 +43,6 @@ export default function Navbar() {
                 CYBERSECURITY CLUB
               </span>
               
-              {/* Normal Badge (No secret click) */}
               <span className="hidden md:inline-block text-[10px] font-black px-2.5 py-0.5 rounded-full bg-blue-100/90 text-blue-900 border border-blue-200">
                 UIET • CSJMU KANPUR
               </span>
@@ -72,12 +71,13 @@ export default function Navbar() {
             <span className="font-bold">Student Portal</span>
           </Link>
 
+          {/* Executive Registration / Apply Link */}
           <Link 
-            href="/login" 
+            href="/executive/login" 
             className="clay-btn-primary px-4 py-2 text-xs sm:text-sm flex items-center gap-1.5 shadow-md"
           >
-            <Video className="w-4 h-4 text-white" />
-            <span className="font-bold">Enroll Now</span>
+            <Shield className="w-4 h-4 text-white" />
+            <span className="font-bold">Executive login</span>
           </Link>
 
           {/* Secret Door 2: The discreet small lock button */}

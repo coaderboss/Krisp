@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { getOrCreateCurrentSlot } from "@/actions/admin";
 import AdminDashboardClient from "./AdminDashboardClient";
-import { ShieldCheck, LogOut, KeyRound } from "lucide-react";
+import { ShieldCheck, LogOut } from "lucide-react";
 import Link from "next/link";
 
 export const instant = false;
@@ -26,20 +26,13 @@ export default async function AdminPage() {
         </div>
         <h2 className="text-2xl font-extrabold text-[#0F2547]">Admin Login Required</h2>
         <p className="text-xs text-slate-600 leading-relaxed">
-          Aapka browser abhi student account (<strong>{session.user.email}</strong>) se logged in hai. 
-          Club Admin Console access karne ke liye kripya logout karein aur Admin account se login karein.
+          Aapka browser abhi standard account (<strong>{session.user.email}</strong>) se logged in hai. 
+          Club Admin Console access karne ke liye kripya logout karein aur Admin account se securely login karein.
         </p>
 
-        <div className="clay-inset p-3.5 rounded-xl text-left text-xs space-y-1">
-          <p className="font-extrabold text-slate-800 flex items-center gap-1.5">
-            <KeyRound className="w-3.5 h-3.5 text-blue-600" />
-            <span>Authorized Admin Accounts:</span>
-          </p>
-          <p className="text-slate-600">1. <code className="text-blue-700 font-bold">admin@csjmu.ac.in</code> (Pass: <code className="text-blue-700 font-bold">admin@cyber2026</code>)</p>
-          <p className="text-slate-600">2. <code className="text-blue-700 font-bold">www.deepakyadav119@gmail.com</code> (Promoted to Admin in DB)</p>
-        </div>
+        {/* SECURITY FIX: Removed all hardcoded credentials and hints from here */}
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-4">
           <form
             action={async () => {
               "use server";
@@ -117,4 +110,3 @@ export default async function AdminPage() {
     </div>
   );
 }
-

@@ -8,8 +8,8 @@ import { AppStatus } from "@prisma/client";
 // Guard: Only CLUB_ADMIN can run these actions
 async function requireAdmin() {
   const session = await auth();
-  if (session?.user?.role !== "CLUB_ADMIN") {
-    throw new Error("Unauthorized: Club Admin privileges are required to perform this action.");
+  if (session?.user?.role !== "CLUB_ADMIN" && session?.user?.role !== "EXECUTIVE") {
+    throw new Error("Unauthorized: Appropriate rights required.");
   }
   return session;
 }
@@ -284,5 +284,17 @@ export async function sendDirectEmail(email: string, subject: string, htmlBody: 
     return { success: true, message: "Direct communication dispatched successfully." };
   } catch (error) {
     return { error: "Failed to dispatch the email. Please verify the SMTP configuration." };
+  }
+}
+
+export async function fetchAllApplications() {
+  try {
+    const apps = await prisma.application.findMany({
+      include: { user: true },
+      orderBy: { appliedAt: "desc" }
+    });
+    return { success: true, data: apps };
+  } catch (error) {
+    return { error: "Failed to fetch applications." };
   }
 }

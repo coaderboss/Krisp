@@ -3,12 +3,13 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import nodemailer from "nodemailer";
 
 // Guard for Admin Operations
 async function requireAdmin() {
   const session = await auth();
-  if (session?.user?.role !== "CLUB_ADMIN") {
-    throw new Error("Unauthorized: Supreme Admin rights required.");
+  if (session?.user?.role !== "CLUB_ADMIN" && session?.user?.role !== "EXECUTIVE") {
+    throw new Error("Unauthorized: Appropriate rights required.");
   }
   return session;
 }
@@ -77,17 +78,37 @@ export async function getPendingExecutives() {
   }
 }
 
-// 4. APPROVE/REJECT EXECUTIVE
 export async function updateExecutiveApproval(userId: string, isApproved: boolean) {
   await requireAdmin();
   try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return { error: "User not found." };
+
     if (isApproved) {
       await prisma.user.update({
         where: { id: userId },
         data: { isApproved: true }
       });
+
+      // Send Approval Email
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: { user: process.env.GMAIL_EMAIL, pass: process.env.GMAIL_APP_PASSWORD },
+      });
+
+      await transporter.sendMail({
+        from: `"Club Admin" <${process.env.GMAIL_EMAIL}>`,
+        to: user.email,
+        subject: "✅ Executive Access Approved",
+        html: `
+          <div style="font-family: Arial; padding: 20px;">
+            <h2>Welcome to the Core Team, ${user.name}!</h2>
+            <p>Your request for Executive privileges has been approved by the Supreme Admin.</p>
+            <p>You can now log in using your exact Name, Email, and Password.</p>
+          </div>
+        `,
+      });
     } else {
-      // If rejected, either revert to STUDENT or delete the account
       await prisma.user.update({
         where: { id: userId },
         data: { role: "STUDENT", isApproved: true } 

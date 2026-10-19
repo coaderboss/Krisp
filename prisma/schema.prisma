@@ -30,6 +30,7 @@ model User {
   id            String    @id @default(cuid())
   name          String
   email         String    @unique
+  rollNumber    String?   // New field for Executive Registration
   password      String?   // Hashed password
   emailVerified DateTime?
   role          Role      @default(STUDENT)
@@ -40,6 +41,7 @@ model User {
 
   // Student relation to their program applications
   applications  Application[]
+  requests AdminRequest[]
 }
 
 // Presenter Program Enrollment Application
@@ -105,4 +107,21 @@ enum FieldType {
   TEXT
   DROPDOWN
   FILE_UPLOAD
+}
+
+// --- EXECUTIVE ACTION REQUESTS ---
+model AdminRequest {
+  id          String   @id @default(cuid())
+  executiveId String
+  executive   User     @relation(fields: [executiveId], references: [id], onDelete: Cascade)
+  actionType  String   // e.g., "UPDATE_MAIL_TEMPLATE", "PUBLISH_SLOT"
+  payload     String   // The new content they want to save (Store as JSON string)
+  status      ReqStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+}
+
+enum ReqStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
