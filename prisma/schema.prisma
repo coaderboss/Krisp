@@ -39,6 +39,10 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  //FORGOT PASSWORD TOKENS
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+
   // Student relation to their program applications
   applications  Application[]
   requests AdminRequest[]

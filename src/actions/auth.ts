@@ -6,6 +6,8 @@ import prisma from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { sendVerificationEmail } from "@/lib/mail";
 import { sendTwoFactorTokenEmail } from "@/lib/mail";
+import crypto from "crypto";
+import { transporter } from "@/lib/mail";
 
 export async function registerStudent(formData: FormData) {
   const name = formData.get("name") as string;
@@ -153,5 +155,107 @@ export async function verifyAdminOTPAndLogin(formData: FormData) {
       return { error: "Final authentication phase failed. Please verify your credentials." };
     }
     throw error;
+  }
+}
+
+export async function sendPasswordResetLink(formData: FormData) {
+  try {
+    const email = formData.get("email") as string;
+    if (!email) return { error: "Email address is required." };
+
+    // 1. Find User
+    const user = await prisma.user.findUnique({ where: { email } });
+    
+    // Security Mechanism: Return success even if user is not found to prevent email enumeration attacks
+    if (!user) {
+      return { success: true }; 
+    }
+
+    // 2. Generate Secure Token (15 minutes expiry)
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000); 
+
+    // 3. Save token in database
+    await prisma.user.update({
+      where: { email },
+      data: {
+        resetToken,
+        resetTokenExpiry
+      }
+    });
+
+    // 4. Generate Reset URL
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
+
+    // 5. Production SMTP Dispatch
+    const mailOptions = {
+      from: `"CyberKrisp Security" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Action Required: Reset Your Password",
+      html: `
+        <div style="font-family: system-ui, -apple-system, sans-serif; max-w: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+          <h2 style="color: #0F2547; margin-bottom: 16px;">Password Reset Request</h2>
+          <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+            We received a request to reset your password for the CyberKrisp Student Portal. Click the secure link below to set a new password. <strong>This link is valid for exactly 15 minutes.</strong>
+          </p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${resetUrl}" style="background-color: #2563EB; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              Reset My Password
+            </a>
+          </div>
+          <p style="color: #64748b; font-size: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+            If you did not request this password reset, please ignore this email or contact the club administrators. Your account remains secure.
+          </p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+
+  } catch (error) {
+    console.error("Forgot Password SMTP Error:", error);
+    return { error: "Failed to dispatch the reset email. Please try again later." };
+  }
+}
+
+export async function resetPassword(formData: FormData) {
+  try {
+    const token = formData.get("token") as string;
+    const password = formData.get("password") as string;
+
+    if (!token || !password) return { error: "Invalid request payload." };
+
+    // 1. Find user with matching token that has NOT expired
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: { gt: new Date() } // Ensures current time is less than expiry
+      }
+    });
+
+    if (!user) {
+      return { error: "This reset link is invalid or has expired. Please request a new one." };
+    }
+
+    // 2. Hash the new password securely
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 3. Update the user record and nullify the token to prevent reuse
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null
+      }
+    });
+
+    return { success: true, message: "Password updated successfully. You can now log in." };
+
+  } catch (error) {
+    console.error("Password Reset Execution Error:", error);
+    return { error: "An error occurred while resetting your password." };
   }
 }

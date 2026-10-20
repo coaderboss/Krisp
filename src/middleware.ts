@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 
-// Redis Connection Setup (Fail-safe mode)
+// Redis Connection Setup (Fail-safe initialization)
 const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
 const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -12,28 +12,15 @@ if (redisUrl && redisToken) {
   const redis = new Redis({ url: redisUrl, token: redisToken });
   ratelimit = new Ratelimit({
     redis: redis,
-    limiter: Ratelimit.slidingWindow(30, '10 s'), // Max 5 requests per 10 seconds
+    limiter: Ratelimit.slidingWindow(30, '10 s'), // Campus NAT friendly (30 req / 10s)
     analytics: true,
   });
 }
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  
-  // Niche hum response object create kar rahe hain taaki usme headers inject kar sakein
-  const response = NextResponse.next();
 
-  // --- 1. ENTERPRISE SECURITY HEADERS (Anti-Hacking Shields) ---
-  // Clickjacking, XSS attacks, aur MIME-sniffing ko edge par hi block karta hai
-  response.headers.set('X-DNS-Prefetch-Control', 'on');
-  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('X-Frame-Options', 'SAMEORIGIN'); // Sirf aapki site iframe me embed ho sakti hai
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-
-  // --- 2. BASIC BOT & SCRIPT PROTECTION ---
-  // Agar request kisi automated script (jaise curl, Postman) ya bina User-Agent ke aati hai, block it.
+  // --- 1. BASIC BOT & SCRIPT PROTECTION ---
   const userAgent = request.headers.get('user-agent') || '';
   if (!userAgent || userAgent.includes('curl') || userAgent.includes('PostmanRuntime')) {
     return new NextResponse(
@@ -42,12 +29,55 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  const isSensitiveRoute = path.startsWith('/admin/login') || 
-                           path.startsWith('/executive/login') || 
-                           path.startsWith('/api/');
+  // --- 2. EDGE ROUTE GUARDS (Full-Proof URL Gatekeeper) ---
+  // Comprehensive NextAuth v4 & v5 cookie detection (HTTP & HTTPS)
+  const sessionToken = 
+    request.cookies.get('authjs.session-token')?.value || 
+    request.cookies.get('__Secure-authjs.session-token')?.value ||
+    request.cookies.get('next-auth.session-token')?.value ||
+    request.cookies.get('__Secure-next-auth.session-token')?.value;
+
+  const isAuthenticated = Boolean(sessionToken);
+
+  // A. Student Portal Protection (/dashboard)
+  if (path.startsWith('/dashboard')) {
+    if (!isAuthenticated) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', path);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // B. Already Logged In Student Accessing /login
+  if (path === '/login' && isAuthenticated) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // C. Supreme Admin Console Protection (/admin)
+  if (path.startsWith('/admin') && path !== '/admin/login') {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
+  }
+
+  // D. Executive Portal Protection (/executive)
+  if (path.startsWith('/executive') && path !== '/executive/login') {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL('/executive/login', request.url));
+    }
+  }
+
+  // --- 3. REDIS RATE LIMITING (Sensitive Routes Only) ---
+  const isSensitiveRoute = 
+    path.startsWith('/admin/login') || 
+    path.startsWith('/executive/login') || 
+    path === '/login' ||
+    path.startsWith('/api/');
 
   if (isSensitiveRoute && ratelimit) {
-    const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "127.0.0.1";
+    const ip = request.headers.get("x-forwarded-for")?.split(',')[0].trim() || 
+               request.headers.get("x-real-ip") || 
+               "127.0.0.1";
     try {
       const { success, limit, reset, remaining } = await ratelimit.limit(`ratelimit_${ip}`);
       if (!success) {
@@ -70,26 +100,21 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // --- 4. EDGE ROUTE GUARDS (Unauthorized Access Prevention) ---
-  // NextAuth ka session token edge par hi check karna taaki bina login wale users server tak hit hi na karein
-  const sessionToken = request.cookies.get('authjs.session-token')?.value || 
-                       request.cookies.get('__Secure-authjs.session-token')?.value;
-
-  // Agar user /admin ya /executive dashboard par jana chahta hai par token nahi hai, direct wapas bhejo
-  if (path.startsWith('/admin') && path !== '/admin/login' && !sessionToken) {
-    return NextResponse.redirect(new URL('/admin/login', request.url));
-  }
-  
-  if (path.startsWith('/executive') && path !== '/executive/login' && !sessionToken) {
-    return NextResponse.redirect(new URL('/executive/login', request.url));
-  }
+  // --- 4. ENTERPRISE SECURITY HEADERS ---
+  const response = NextResponse.next();
+  response.headers.set('X-DNS-Prefetch-Control', 'on');
+  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   return response;
 }
 
-// Ye middleware sirf in paths par chalega (Images, CSS, aur static files par time waste nahi karega)
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
+
