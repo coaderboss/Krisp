@@ -86,11 +86,10 @@ export async function submitStudentForm(formData: FormData) {
     // --- FIX 2: FILE UPLOAD FIX ---
     let finalValue = value;
     if (value instanceof File) {
-      if (!value.name || value.name === "undefined") return; // Agar file empty hai toh skip karo
-      finalValue = value.name; // "document.pdf" jaisa naam save hoga, khali object {} nahi
+      if (!value.name || value.name === "undefined") return; 
+      finalValue = value.name; 
     }
 
-    // Agar Checkbox jaisi ek hi field me multiple values hain (e.g. array)
     if (rawData[key]) {
       if (Array.isArray(rawData[key])) {
         rawData[key].push(finalValue);
@@ -103,12 +102,28 @@ export async function submitStudentForm(formData: FormData) {
   });
 
   try {
+    // --- NAYA LOGIC: Highlighted Fields (Pin to Card) Filter Karna ---
+    const highlightedFields = await prisma.formField.findMany({
+      where: { isHighlighted: true },
+      select: { fieldLabel: true }
+    });
+
+    const highlightedDataObj: Record<string, any> = {};
+    highlightedFields.forEach(field => {
+      // Checkbox array name (Label[]) ko bhi handle karo
+      const val = rawData[field.fieldLabel] ?? rawData[`${field.fieldLabel}[]`];
+      if (val !== undefined) {
+        highlightedDataObj[field.fieldLabel] = val;
+      }
+    });
+
     // 2. Database me save karna
     await prisma.application.create({
       data: {
         userId: session.user.id,
         topicInterested: rawData["Choose your preffered topic"]?.toString() || rawData["Topic"]?.toString() || "Custom Application",
         dynamicData: JSON.stringify(rawData), 
+        highlightedData: Object.keys(highlightedDataObj).length > 0 ? JSON.stringify(highlightedDataObj) : null, // Sirf 4 fields yahan jayenge
         status: "WAITING"
       }
     });

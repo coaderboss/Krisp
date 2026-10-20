@@ -268,7 +268,7 @@ export async function sendDirectEmail(email: string, subject: string, htmlBody: 
   }
 }
 
-// 10. Fetch Applications (TYPESCRIPT CRASH FIXED)
+// 10. Fetch Applications (TYPESCRIPT CRASH FIXED & HIGHLIGHTS ADDED)
 export async function fetchAllApplications() {
   try {
     const apps = await prisma.application.findMany({
@@ -276,10 +276,11 @@ export async function fetchAllApplications() {
       orderBy: { appliedAt: "desc" }
     });
 
-    // Data will flow entirely from dynamicData
+    // Data will flow entirely from dynamicData and highlightedData
     const fixedApps = apps.map(app => ({
       ...app,
-      dynamicData: app.dynamicData
+      dynamicData: app.dynamicData,
+      highlightedData: app.highlightedData // Dashboard par show hone wala fast data
     }));
 
     return { success: true, data: fixedApps };

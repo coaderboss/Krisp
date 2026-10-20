@@ -30,8 +30,6 @@ export default async function AdminPage() {
           Club Admin Console access karne ke liye kripya logout karein aur Admin account se securely login karein.
         </p>
 
-        {/* SECURITY FIX: Removed all hardcoded credentials and hints from here */}
-
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-4">
           <form
             action={async () => {
@@ -57,8 +55,8 @@ export default async function AdminPage() {
     );
   }
 
-  // Fetch slot & all applications
-  const [slot, applications] = await Promise.all([
+  // --- FIX: Form Fields (Live Data) fetch karke Client ko bhej rahe hain ---
+  const [slot, applications, currentFormFields] = await Promise.all([
     getOrCreateCurrentSlot(),
     prisma.application.findMany({
       include: {
@@ -66,6 +64,9 @@ export default async function AdminPage() {
       },
       orderBy: { appliedAt: "asc" },
     }),
+    prisma.formField.findMany({
+      orderBy: { orderIndex: "asc" }
+    })
   ]);
 
   return (
@@ -106,7 +107,11 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      <AdminDashboardClient initialSlot={slot} initialApplications={applications} />
+      <AdminDashboardClient 
+        initialSlot={slot} 
+        initialApplications={applications} 
+        initialFormFields={currentFormFields} 
+      />
     </div>
   );
 }

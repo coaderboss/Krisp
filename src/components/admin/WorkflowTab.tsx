@@ -162,11 +162,10 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
               const isSelectedInSlot = app.weeklySlotId === slot.id;
               return (
                 <div key={app.id} className={`clay-pill p-5 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isSelectedInSlot ? "ring-2 ring-blue-500/50 bg-blue-50/20" : ""}`}>
-                  <div className="space-y-1.5 max-w-xl">
+                  <div className="space-y-2 max-w-2xl">
                     <div className="flex items-center gap-2">
                       <h4 className="font-extrabold text-[#0F2547] text-sm">{app.user.name}</h4>
                       <span className="text-[11px] text-slate-400">•</span>
-                      <span className="text-xs font-semibold text-slate-600">{app.course}</span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                         app.status === "WAITING" ? "bg-amber-100 text-amber-800" :
                         app.status === "SHORTLISTED" ? "bg-blue-100 text-blue-800" :
@@ -174,8 +173,31 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
                         app.status === "COMPLETED" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
                       }`}>{app.status}</span>
                     </div>
-                    <p className="text-xs text-slate-700"><strong className="text-blue-700 font-bold">Subject:</strong> {app.topicInterested}</p>
-                    <p className="text-[11px] text-slate-400">Email: {app.user.email} • Registered: {new Date(app.appliedAt).toLocaleDateString()}</p>
+                    
+                    {/* 🟢 FIX 5: NAYA DYNAMIC HIGHLIGHTED DATA RENDERER */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-1">
+                      {(() => {
+                        let highlights = {};
+                        try {
+                          if (app.highlightedData) highlights = JSON.parse(app.highlightedData);
+                        } catch (e) {}
+                        
+                        const entries = Object.entries(highlights);
+                        if (entries.length > 0) {
+                          return entries.map(([k, v]) => (
+                            <p key={k} className="text-[11px] text-slate-700 bg-white/60 px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                              <strong className="text-blue-700 font-extrabold uppercase tracking-wider">{k}:</strong> {String(v)}
+                            </p>
+                          ));
+                        }
+                        return (
+                          <p className="text-[11px] text-slate-700 bg-white/60 px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                            <strong className="text-blue-700 font-extrabold uppercase tracking-wider">Subject:</strong> {app.topicInterested}
+                          </p>
+                        );
+                      })()}
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1.5">Email: {app.user.email} • Registered: {new Date(app.appliedAt).toLocaleDateString()}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <button onClick={() => handleToggleSelect(app.id)} disabled={loading === app.id} className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all ${

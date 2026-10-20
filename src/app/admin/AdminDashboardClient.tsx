@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Video, Users, Send, Settings as SettingsIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Video, Users, Send, Settings as SettingsIcon, Bell, CheckCircle, XCircle, Eye, Type, List, CheckSquare, Upload, ArrowRight } from "lucide-react";
 import WorkflowTab from "@/components/admin/WorkflowTab";
 import TeamTab from "@/components/admin/TeamTab";
 import CommunicationTab from "@/components/admin/CommunicationTab";
 import SettingsTab from "@/components/admin/SettingsTab";
+import { getPendingRequests, approveRequest, rejectRequest } from "@/actions/requests";
 
 type Trainee = {
   id: string;
@@ -27,12 +28,61 @@ type Slot = {
 
 export default function AdminDashboardClient({ 
   initialSlot, 
-  initialApplications 
+  initialApplications,
+  initialFormFields
 }: { 
   initialSlot: Slot; 
   initialApplications: Trainee[];
+  initialFormFields: any[];
 }) {
-  const [activeTab, setActiveTab] = useState<"WORKFLOW" | "TEAM" | "COMMUNICATION" | "SETTINGS">("WORKFLOW");
+  const [activeTab, setActiveTab] = useState<"WORKFLOW" | "TEAM" | "COMMUNICATION" | "SETTINGS" | "INBOX">("WORKFLOW");
+  
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [loadingReqId, setLoadingReqId] = useState<string>("");
+  const [viewingPayload, setViewingPayload] = useState<any | null>(null);
+
+  // Mount hote hi notification count fetch karo
+  useEffect(() => {
+    loadRequests(); 
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "INBOX") {
+      loadRequests();
+    }
+  }, [activeTab]);
+
+  async function loadRequests() {
+    const res = await getPendingRequests();
+    if (res.success && res.data) {
+      setPendingRequests(res.data);
+    }
+  }
+
+  async function handleApprove(id: string) {
+    setLoadingReqId(id);
+    const res = await approveRequest(id);
+    if (res.success) {
+      setPendingRequests(prev => prev.filter(req => req.id !== id));
+      setViewingPayload(null);
+      alert(res.message);
+      window.location.reload(); // UI ko fresh DB data ke saath sync karein
+    } else {
+      alert(res.error);
+    }
+    setLoadingReqId("");
+  }
+
+  async function handleReject(id: string) {
+    if (!confirm("Are you sure you want to reject this request?")) return;
+    setLoadingReqId(id);
+    const res = await rejectRequest(id);
+    if (res.success) {
+      setPendingRequests(prev => prev.filter(req => req.id !== id));
+      setViewingPayload(null);
+    }
+    setLoadingReqId("");
+  }
 
   return (
     <div className="space-y-6 pb-16">
@@ -50,20 +100,193 @@ export default function AdminDashboardClient({
         <button onClick={() => setActiveTab("SETTINGS")} className={`px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-t-xl transition-all ${activeTab === "SETTINGS" ? "bg-slate-800 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
           <div className="flex items-center gap-2"><SettingsIcon className="w-4 h-4" /> System Settings</div>
         </button>
+        
+        <button onClick={() => setActiveTab("INBOX")} className={`ml-auto px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-t-xl transition-all ${activeTab === "INBOX" ? "bg-amber-500 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
+          <div className="flex items-center gap-2">
+            <Bell className="w-4 h-4" /> 
+            Inbox {pendingRequests.length > 0 && <span className="bg-red-500 text-white px-1.5 rounded-full text-[10px]">{pendingRequests.length}</span>}
+          </div>
+        </button>
       </div>
 
-      {/* Tab Rendering Logic */}
-      {activeTab === "WORKFLOW" && (
-        <WorkflowTab 
-          initialSlot={initialSlot} 
-          initialApplications={initialApplications} 
-          onNavigateToComm={() => setActiveTab("COMMUNICATION")} 
-        />
-      )}
-      
+      {activeTab === "WORKFLOW" && <WorkflowTab initialSlot={initialSlot} initialApplications={initialApplications} onNavigateToComm={() => setActiveTab("COMMUNICATION")} />}
       {activeTab === "TEAM" && <TeamTab />}
       {activeTab === "COMMUNICATION" && <CommunicationTab slot={initialSlot} />}
       {activeTab === "SETTINGS" && <SettingsTab />}
+
+      {activeTab === "INBOX" && (
+        <div className="clay-card p-6 sm:p-8 space-y-6">
+          <div className="border-b border-slate-200 pb-4">
+            <h2 className="text-xl font-extrabold text-[#0F2547]">Executive Approvals Inbox</h2>
+            <p className="text-xs text-slate-500 mt-1">Review and execute system changes requested by your core team.</p>
+          </div>
+
+          <div className="space-y-4">
+            {pendingRequests.length > 0 ? pendingRequests.map(req => (
+              <div key={req.id} className="clay-inset p-5 rounded-2xl flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                <div>
+                  <span className="px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-black uppercase rounded-lg">
+                    {req.actionType.replace(/_/g, " ")}
+                  </span>
+                  <h4 className="font-extrabold text-slate-800 mt-2 text-sm">Requested by: {req.executive.name}</h4>
+                  <p className="text-xs text-slate-500 mt-1">Submitted on {new Date(req.createdAt).toLocaleString()}</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                  <button onClick={() => setViewingPayload(req)} className="clay-btn px-4 py-2 text-xs font-bold w-full md:w-auto flex items-center gap-2 justify-center">
+                    <Eye className="w-4 h-4" /> Compare Changes
+                  </button>
+                  <button onClick={() => handleApprove(req.id)} disabled={loadingReqId === req.id} className="clay-btn-primary px-4 py-2 text-xs flex items-center gap-1.5 w-full md:w-auto justify-center">
+                    <CheckCircle className="w-4 h-4" /> Approve
+                  </button>
+                </div>
+              </div>
+            )) : (
+              <div className="text-center py-10">
+                <Bell className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                <p className="text-sm font-bold text-slate-500">No pending requests at the moment.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* SMART PAYLOAD PREVIEW MODAL (DIFF VIEWER)  */}
+      {/* ========================================== */}
+      {viewingPayload && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden clay-card border border-slate-200">
+            
+            <div className="bg-slate-50 p-5 border-b border-slate-200 flex items-center justify-between z-10">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-[10px] font-black uppercase rounded-lg">
+                    {viewingPayload.actionType.replace(/_/g, " ")}
+                  </span>
+                  <h3 className="text-lg font-extrabold text-[#0F2547]">Changes Diff Viewer</h3>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Requested by: <strong>{viewingPayload.executive.name}</strong></p>
+              </div>
+              <button onClick={() => setViewingPayload(null)} className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center transition-colors font-bold shadow-sm">✕</button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
+              {(() => {
+                let data = null;
+                try { data = JSON.parse(viewingPayload.payload); } 
+                catch (e) { return <div className="text-red-500 font-bold text-sm">Failed to parse payload data.</div>; }
+
+                if (viewingPayload.actionType === "UPDATE_FORM") {
+                  const liveFields = initialFormFields || [];
+                  const proposedFields = data.fields || [];
+
+                  const liveMap = new Map(liveFields.map(f => [f.fieldName, f]));
+                  const proposedMap = new Map(proposedFields.map((f: any) => [f.fieldName, f]));
+
+                  // Find Deleted Fields
+                  const deletedFields = liveFields.filter(f => !proposedMap.has(f.fieldName));
+
+                  // Find New & Modified Fields
+                  const comparedFields = proposedFields.map((prop: any) => {
+                    const live = liveMap.get(prop.fieldName);
+                    if (!live) return { ...prop, diffStatus: "NEW" };
+                    
+                    const isModified = 
+                      live.fieldLabel !== prop.fieldLabel || 
+                      live.fieldType !== prop.fieldType || 
+                      live.isRequired !== prop.isRequired || 
+                      live.isHighlighted !== prop.isHighlighted;
+                    
+                    return { ...prop, diffStatus: isModified ? "MODIFIED" : "UNCHANGED", oldLive: live };
+                  });
+
+                  return (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 border-b border-slate-200 pb-2">
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Added</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500"></span> Modified</span>
+                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500"></span> Deleted</span>
+                      </div>
+
+                      {comparedFields.map((field: any, idx: number) => (
+                        <div key={idx} className={`p-4 rounded-xl border flex items-start gap-4 shadow-sm transition-all
+                          ${field.diffStatus === "NEW" ? "bg-emerald-50/50 border-emerald-200" : 
+                            field.diffStatus === "MODIFIED" ? "bg-amber-50/30 border-amber-200" : "bg-white border-slate-200 opacity-70"}`}>
+                          
+                          <div className={`p-2 rounded-lg ${field.diffStatus === "NEW" ? "bg-emerald-100" : field.diffStatus === "MODIFIED" ? "bg-amber-100" : "bg-slate-100"}`}>
+                            {field.fieldType === "TEXT" && <Type className="w-5 h-5 text-slate-700" />}
+                            {field.fieldType === "DROPDOWN" && <List className="w-5 h-5 text-slate-700" />}
+                            {field.fieldType === "CHECKBOX" && <CheckSquare className="w-5 h-5 text-slate-700" />}
+                            {field.fieldType === "FILE_UPLOAD" && <Upload className="w-5 h-5 text-slate-700" />}
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h5 className="font-bold text-slate-800 text-sm">{field.fieldLabel}</h5>
+                              {field.diffStatus === "NEW" && <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-100 text-emerald-700 uppercase">🟢 New Field</span>}
+                              {field.diffStatus === "MODIFIED" && <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-700 uppercase">🟡 Modified</span>}
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center gap-2 mt-2">
+                              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">Type: {field.fieldType}</span>
+                              {field.isRequired && <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md">Required</span>}
+                              {field.isHighlighted && <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">📌 Pinned</span>}
+                            </div>
+
+                            {field.diffStatus === "MODIFIED" && field.oldLive && (
+                              <div className="mt-3 p-2 bg-white/60 border border-amber-200 rounded-lg text-xs flex flex-col gap-1">
+                                <span className="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Previous State:</span>
+                                <span className="text-slate-600 strike line-through">{field.oldLive.fieldLabel} ({field.oldLive.fieldType})</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                      {deletedFields.map((field: any, idx: number) => (
+                        <div key={`del-${idx}`} className="p-4 rounded-xl border border-red-200 bg-red-50/50 flex items-start gap-4 opacity-70">
+                          <div className="p-2 rounded-lg bg-red-100">
+                            <XCircle className="w-5 h-5 text-red-500" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h5 className="font-bold text-slate-800 text-sm line-through">{field.fieldLabel}</h5>
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-red-100 text-red-700 uppercase">🔴 Will be Deleted</span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">This field and its data structure will be removed.</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-bold text-slate-700">Raw Configuration Data:</h4>
+                    <pre className="bg-slate-900 text-emerald-400 p-4 rounded-xl shadow-inner text-xs overflow-x-auto">
+                      {JSON.stringify(data, null, 2)}
+                    </pre>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="bg-white p-5 border-t border-slate-200 flex items-center justify-end gap-3 z-10">
+              <button onClick={() => setViewingPayload(null)} className="px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+                Cancel
+              </button>
+              <button onClick={() => handleReject(viewingPayload.id)} disabled={loadingReqId === viewingPayload.id} className="px-5 py-2.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors flex items-center gap-2">
+                <XCircle className="w-4 h-4" /> Reject Request
+              </button>
+              <button onClick={() => handleApprove(viewingPayload.id)} disabled={loadingReqId === viewingPayload.id} className="clay-btn-primary px-6 py-2.5 text-xs flex items-center gap-2 shadow-lg">
+                <CheckCircle className="w-4 h-4" /> {loadingReqId === viewingPayload.id ? "Approving..." : "Approve & Apply Live"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -124,12 +124,13 @@ export default function ExecutiveDashboard() {
     else notify("Failed to update status", "error");
   }
 
-  // --- FORM BUILDER HANDLERS ---
   function addField(type: "TEXT" | "DROPDOWN" | "FILE_UPLOAD" | "CHECKBOX") {
     setFormFields([...formFields, { 
       id: `f_${Date.now()}`, fieldName: `field_${Date.now()}`, fieldLabel: "New Field", 
       fieldType: type, options: (type === "DROPDOWN" || type === "CHECKBOX") ? ["Option 1"] : [], 
-      isRequired: false, wordLimit: type === "TEXT" ? 100 : undefined 
+      isRequired: false, 
+      isHighlighted: false, // NAYA FIELD ADD KIYA
+      wordLimit: type === "TEXT" ? 100 : undefined 
     }]);
   }
 
@@ -150,6 +151,14 @@ export default function ExecutiveDashboard() {
   setFormFields(formFields.map(f => f.id === fieldId ? { ...f, options: f.options.filter((_: any, i: number) => i !== index) } : f));
 }
   function updateField(id: string, key: string, value: any) {
+    // --- NAYA CHECK: Max 4 limits for Pin ---
+    if (key === "isHighlighted" && value === true) {
+      const currentPinned = formFields.filter(f => f.isHighlighted).length;
+      if (currentPinned >= 4) {
+        notify("Aap maximum 4 fields hi dashboard card par pin kar sakte hain!", "error");
+        return;
+      }
+    }
     setFormFields(formFields.map(f => f.id === id ? { ...f, [key]: value } : f));
   }
   function removeField(id: string) {
@@ -260,13 +269,41 @@ export default function ExecutiveDashboard() {
                   return (
                     <div key={app.id} className={`clay-pill p-5 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isSelectedInSlot ? "ring-2 ring-blue-500/50 bg-blue-50/20" : ""}`}>
                       
-                      <div className="space-y-1.5 max-w-xl cursor-pointer" onClick={() => setSelectedStudent(app)}>
+                      <div className="space-y-2 max-w-2xl cursor-pointer" onClick={() => setSelectedStudent(app)}>
                         <div className="flex items-center gap-2">
+                          {/* Yahan purana login naam hi rakha hai for reference, real data niche aayega */}
                           <h4 className="font-extrabold text-[#0F2547] text-sm hover:text-blue-600 transition-colors">{app.name}</h4>
                           <span className="text-[11px] text-slate-400">•</span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-800`}>{app.status}</span>
                         </div>
-                        <p className="text-xs text-slate-700"><strong className="text-blue-700 font-bold">Subject:</strong> {app.topicInterested}</p>
+                        
+                        {/* --- NAYA: DYNAMIC HIGHLIGHTED DATA RENDERER --- */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-1">
+                          {(() => {
+                            let highlights = {};
+                            try {
+                              // Backend se jo 4 pinned items aaye hain, unhe parse karo
+                              if (app.highlightedData) highlights = JSON.parse(app.highlightedData);
+                            } catch (e) {}
+                            
+                            const entries = Object.entries(highlights);
+                            
+                            if (entries.length > 0) {
+                              return entries.map(([k, v]) => (
+                                <p key={k} className="text-[11px] text-slate-700 bg-white/60 px-2 py-1 rounded-md border border-slate-200 shadow-sm">
+                                  <strong className="text-blue-700 font-extrabold uppercase tracking-wider">{k}:</strong> {String(v)}
+                                </p>
+                              ));
+                            }
+                            
+                            // Fallback agar admin ne kuch bhi pin nahi kiya hai
+                            return (
+                              <p className="text-[11px] text-slate-700 bg-white/60 px-2 py-1 rounded-md border border-slate-200">
+                                <strong className="text-blue-700 font-extrabold uppercase tracking-wider">Subject:</strong> {app.topicInterested}
+                              </p>
+                            );
+                          })()}
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
@@ -415,11 +452,23 @@ export default function ExecutiveDashboard() {
                       </div>
                     )}
                   </div>
-                  <div className="flex md:flex-col items-center justify-between md:justify-center gap-4 md:w-32 md:border-l border-slate-200 md:pl-4">
+                  <div className="flex md:flex-col items-center justify-between md:justify-center gap-4 md:w-36 md:border-l border-slate-200 md:pl-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={field.isRequired} onChange={(e) => updateField(field.id, "isRequired", e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
                       <span className="text-xs font-bold text-slate-600">Required</span>
                     </label>
+
+                    {/* NAYA: PIN TO CARD TOGGLE */}
+                    <label className="flex items-center gap-2 cursor-pointer tooltip-trigger" title="Show this field directly on Dashboard">
+                      <input
+                        type="checkbox"
+                        checked={field.isHighlighted || false}
+                        onChange={(e) => updateField(field.id, "isHighlighted", e.target.checked)}
+                        className="w-4 h-4 text-amber-500 rounded accent-amber-500"
+                      />
+                      <span className="text-[11px] font-black text-amber-600 uppercase tracking-wider">📌 Pin</span>
+                    </label>
+
                     <button onClick={() => removeField(field.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Trash2 className="w-5 h-5" /></button>
                   </div>
                 </div>

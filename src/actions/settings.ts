@@ -40,6 +40,12 @@ export async function getFormFields() {
 export async function saveFormFields(fields: any[]) {
   await requireAdmin();
   
+  // --- STRICT VALIDATION: Maximum 4 fields can be highlighted ---
+  const highlightedCount = fields.filter((f: any) => f.isHighlighted).length;
+  if (highlightedCount > 4) {
+    return { error: "Validation Error: Aap maximum 4 fields ko hi dashboard card par pin (highlight) kar sakte hain." };
+  }
+  
   try {
     // Transaction: Delete old form layout and insert the new fully updated layout
     await prisma.$transaction([
@@ -52,14 +58,15 @@ export async function saveFormFields(fields: any[]) {
           options: f.options,
           isRequired: f.isRequired,
           isActive: true,
+          isHighlighted: f.isHighlighted || false, // NAYA FIELD: Save the toggle state
           orderIndex: index // Maintains the order you set in UI
         }))
       })
     ]);
 
-    revalidatePath("/dashboard"); // FIX 3: Sahi dashboard path update karna
+    revalidatePath("/dashboard"); // Sahi dashboard path update karna
     revalidatePath("/admin");
-    return { success: true, message: "Form successfully published! Students will now see this exact form." };
+    return { success: true, message: "Form successfully published! Highlights updated on Dashboard." };
   } catch (error) {
     console.error(error);
     return { error: "Failed to save form structure to database." };

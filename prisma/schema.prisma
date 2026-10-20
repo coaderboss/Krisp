@@ -53,6 +53,7 @@ model Application {
   semester        String?        // Wapas add kiya (UI ke liye)
   topicInterested String         @default("Dynamic Topic") 
   dynamicData     String?        // Saara data isme jayega
+  highlightedData String?
   status          AppStatus      @default(WAITING)
   appliedAt       DateTime       @default(now())
   hasNudged       Boolean        @default(false)
@@ -98,6 +99,7 @@ model FormField {
   options     String[]  // Dropdown options (e.g., ["1st Sem", "2nd Sem", "3rd Sem"]) - Empty if TEXT/FILE
   isRequired  Boolean   @default(true)
   isActive    Boolean   @default(true) // Admin can hide a field without deleting it
+  isHighlighted Boolean   @default(false)
   orderIndex  Int       @default(0)    // To sort fields up and down in the form
   
   createdAt   DateTime  @default(now())

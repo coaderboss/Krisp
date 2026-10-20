@@ -35,6 +35,7 @@ type FormField = {
   fieldType: FieldType;
   options: string[];
   isRequired: boolean;
+  isHighlighted?: boolean;
   wordLimit?: number;
 };
 
@@ -86,6 +87,7 @@ export default function SettingsTab() {
           fieldType: f.fieldType as FieldType,
           options: f.options || [],
           isRequired: f.isRequired,
+          isHighlighted: f.isHighlighted || false,
           wordLimit: f.wordLimit || 0,
         }));
 
@@ -143,12 +145,20 @@ export default function SettingsTab() {
       fieldType: type,
       options: type === "DROPDOWN" || type === "CHECKBOX" ? ["Option 1"] : [],
       isRequired: false,
+      isHighlighted: false,
       wordLimit: type === "TEXT" ? 100 : undefined,
     };
     setFormFields([...formFields, newField]);
   }
 
   function updateField(id: string, key: keyof FormField, value: any) {
+    if (key === "isHighlighted" && value === true) {
+      const currentPinned = formFields.filter(f => f.isHighlighted).length;
+      if (currentPinned >= 4) {
+        notify("Aap maximum 4 fields hi dashboard card par pin kar sakte hain!", "error");
+        return;
+      }
+    }
     setFormFields(
       formFields.map((f) => (f.id === id ? { ...f, [key]: value } : f)),
     );
@@ -524,23 +534,31 @@ export default function SettingsTab() {
                     )}
                   </div>
 
-                  <div className="flex md:flex-col items-center justify-between md:justify-center gap-4 md:w-32 md:border-l border-slate-200 md:pl-4">
+                  <div className="flex md:flex-col items-center justify-between md:justify-center gap-4 md:w-36 md:border-l border-slate-200 md:pl-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={field.isRequired}
-                        onChange={(e) =>
-                          updateField(field.id, "isRequired", e.target.checked)
-                        }
+                        onChange={(e) => updateField(field.id, "isRequired", e.target.checked)}
                         className="w-4 h-4 text-blue-600 rounded"
                       />
-                      <span className="text-xs font-bold text-slate-600">
-                        Required
-                      </span>
+                      <span className="text-xs font-bold text-slate-600">Required</span>
                     </label>
+
+                    {/* NAYA: PIN TO CARD TOGGLE */}
+                    <label className="flex items-center gap-2 cursor-pointer tooltip-trigger" title="Show this field directly on Candidate Dashboard Card">
+                      <input
+                        type="checkbox"
+                        checked={field.isHighlighted || false}
+                        onChange={(e) => updateField(field.id, "isHighlighted", e.target.checked)}
+                        className="w-4 h-4 text-amber-500 rounded accent-amber-500"
+                      />
+                      <span className="text-[11px] font-black text-amber-600 uppercase tracking-wider">📌 Pin</span>
+                    </label>
+
                     <button
                       onClick={() => removeField(field.id)}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-xl"
+                      className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
