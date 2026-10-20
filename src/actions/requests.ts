@@ -92,8 +92,12 @@ export async function approveRequest(requestId: string) {
         data: { isPublished: true }
       });
     } else if (request.actionType === "UPDATE_MAIL_TEMPLATE") {
-      // Future scope: Save template to a global settings table
-      console.log("Mail template approved:", payload.template);
+      // 🟢 FIX: Global Mail Template ab Database me save hoga
+      await prisma.clubSettings.upsert({
+        where: { id: "global" },
+        update: { mailTemplate: payload.template },
+        create: { id: "global", mailTemplate: payload.template }
+      });
     }
 
     // 2. MARK AS APPROVED

@@ -129,3 +129,10 @@ enum ReqStatus {
   APPROVED
   REJECTED
 }
+
+// --- GLOBAL SETTINGS (Mail Templates, etc.) ---
+model ClubSettings {
+  id           String   @id @default("global")
+  mailTemplate String   @default("Hello {{name}},\n\nYour presentation is scheduled.")
+  updatedAt    DateTime @updatedAt
+}
