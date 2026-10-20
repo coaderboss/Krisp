@@ -38,8 +38,12 @@ export async function nudgeAdmin(applicationId: string) {
     const app = await prisma.application.findUnique({ where: { id: applicationId } });
     if (!app) return { error: "Application not found" };
 
+    // --- SECURITY FIX: IDOR Ownership Guard ---
+    if (app.userId !== session.user.id) {
+      return { error: "Unauthorized access: You cannot nudge someone else's application." };
+    }
+
     // --- RATE LIMITING: Week mein max 2 baar Nudge ---
-    // Logic: Agar last nudge ko 3.5 din (approx half week) nahi hue hain, toh error do
     if (app.nudgeDate) {
       const daysSinceLastNudge = (new Date().getTime() - new Date(app.nudgeDate).getTime()) / (1000 * 3600 * 24);
       if (daysSinceLastNudge < 3.5) {
@@ -51,10 +55,7 @@ export async function nudgeAdmin(applicationId: string) {
 
     await prisma.application.update({
       where: { id: applicationId },
-      data: { 
-        hasNudged: true,
-        nudgeDate: new Date()
-      }
+      data: { hasNudged: true, nudgeDate: new Date() }
     });
     
     revalidatePath("/dashboard");
@@ -70,19 +71,34 @@ export async function submitStudentForm(formData: FormData) {
   const session = await auth();
   if (!session?.user) return { error: "Unauthorized: Please login first." };
 
+  // --- FIX 1: DUPLICATE APPLICATION BLOCK ---
+  const existingApp = await prisma.application.findFirst({
+    where: { userId: session.user.id }
+  });
+  if (existingApp) {
+    return { error: "Aap already ek application submit kar chuke hain. Duplicate submissions allowed nahi hain." };
+  }
+
   // 1. Dynamic Form Data ko ek JSON object me convert karna
   const rawData: Record<string, any> = {};
   
   formData.forEach((value, key) => {
+    // --- FIX 2: FILE UPLOAD FIX ---
+    let finalValue = value;
+    if (value instanceof File) {
+      if (!value.name || value.name === "undefined") return; // Agar file empty hai toh skip karo
+      finalValue = value.name; // "document.pdf" jaisa naam save hoga, khali object {} nahi
+    }
+
     // Agar Checkbox jaisi ek hi field me multiple values hain (e.g. array)
     if (rawData[key]) {
       if (Array.isArray(rawData[key])) {
-        rawData[key].push(value);
+        rawData[key].push(finalValue);
       } else {
-        rawData[key] = [rawData[key], value];
+        rawData[key] = [rawData[key], finalValue];
       }
     } else {
-      rawData[key] = value;
+      rawData[key] = finalValue;
     }
   });
 
@@ -91,12 +107,8 @@ export async function submitStudentForm(formData: FormData) {
     await prisma.application.create({
       data: {
         userId: session.user.id,
-        // Yahan hum form se koi topic field uthane ki koshish karenge, warna default denge
         topicInterested: rawData["Choose your preffered topic"]?.toString() || rawData["Topic"]?.toString() || "Custom Application",
-        
-        // NAYA FIELD: Form ka saara data JSON format me save hoga
         dynamicData: JSON.stringify(rawData), 
-        
         status: "WAITING"
       }
     });

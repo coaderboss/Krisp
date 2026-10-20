@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getOrCreateCurrentSlot, runAutoQueue, toggleStudentSelection, updateApplicationStatus, sendMassEmails, sendDirectEmail, sendInvitesToShortlisted, fetchAllApplications } from "@/actions/admin";
+import { getOrCreateCurrentSlot, runAutoQueue, toggleStudentSelection, updateApplicationStatus, fetchAllApplications } from "@/actions/admin";
 import { getFormFields } from "@/actions/settings";
 import { submitReviewRequest } from "@/actions/requests";
-import { Video, Send, Settings, Zap, EyeOff, ShieldAlert, CheckCircle, GripVertical, Type, List, Upload, Clock, PlusCircle, Trash2, XCircle, UserPlus, UserMinus, RotateCcw, CheckSquare } from "lucide-react";
+import { Video, Send, Settings, Zap, ShieldAlert, CheckCircle, GripVertical, Type, List, Upload, Clock, PlusCircle, Trash2, XCircle, UserPlus, UserMinus, CheckSquare } from "lucide-react";
 
 export default function ExecutiveDashboard() {
   const [activeTab, setActiveTab] = useState<"WORKFLOW" | "COMMUNICATION" | "SETTINGS">("WORKFLOW");
@@ -21,12 +21,8 @@ export default function ExecutiveDashboard() {
   const [screeningTemplate, setScreeningTemplate] = useState("Hello {{name}},\n\nYour presentation is scheduled.");
   
   // Communication Extra States
-  const [massRecipients, setMassRecipients] = useState([{ name: "", email: "" }]);
   const [massSubject, setMassSubject] = useState("");
   const [massTemplate, setMassTemplate] = useState("<h2>Hello {{name}},</h2>\n<p>Message...</p>");
-  const [directEmail, setDirectEmail] = useState("");
-  const [directSubject, setDirectSubject] = useState("");
-  const [directBody, setDirectBody] = useState("");
 
   const selectedStudents = slot?.selectedTrainees || [];
   const filteredApps = applications.filter((app: any) => filter === "ALL" ? true : app.status === filter);
@@ -47,21 +43,23 @@ export default function ExecutiveDashboard() {
         setSlot(slotData);
         
         // 3. Load Real Student Responses from Database
-      const appsRes = await fetchAllApplications();
-      if (appsRes.success && appsRes.data) {
-        const realData = appsRes.data.map((app: any) => ({
-          id: app.id,
-          name: app.user?.name || "Unknown User",
-          email: app.user?.email || "No Email",
-          topic: app.topicInterested || "Not Selected",
-          document: "Pending Upload", 
-          date: new Date(app.appliedAt).toLocaleDateString(),
-          // BUGS FIXED: Naye fields UI state mein pass kar diye!
-          dynamicData: app.dynamicData, 
-          description: app.description
-        }));
-        setStudentResponses(realData);
-      }
+        const appsRes = await fetchAllApplications();
+        if (appsRes.success && appsRes.data) {
+          const realData = appsRes.data.map((app: any) => ({
+            id: app.id,
+            name: app.user?.name || "Unknown User",
+            email: app.user?.email || "No Email",
+            topicInterested: app.topicInterested || "Not Selected",
+            status: app.status,
+            appliedAt: app.appliedAt,
+            weeklySlotId: app.weeklySlotId,
+            user: app.user,
+            // BUGS FIXED: Ye dono pass karna zaruri the UI me render ke liye
+            dynamicData: app.dynamicData, 
+            description: app.description
+          }));
+          setApplications(realData);
+        }
 
         const fieldsRes = await getFormFields();
         if (fieldsRes.success && fieldsRes.data) {
@@ -135,7 +133,6 @@ export default function ExecutiveDashboard() {
     }]);
   }
 
-  // NOTE: You also need to add these two functions below removeField to handle options
   function addOption(fieldId: string) {
     setFormFields(formFields.map(f => f.id === fieldId ? { ...f, options: [...f.options, `Option ${f.options.length + 1}`] } : f));
   }
@@ -150,9 +147,8 @@ export default function ExecutiveDashboard() {
     }));
   }
   function removeOption(fieldId: string, index: number) {
-    setFormFields(formFields.map(f => f.id === fieldId ? { ...f, options: f.options.filter((_, i) => i !== index) } : f));
-  }
-
+  setFormFields(formFields.map(f => f.id === fieldId ? { ...f, options: f.options.filter((_: any, i: number) => i !== index) } : f));
+}
   function updateField(id: string, key: string, value: any) {
     setFormFields(formFields.map(f => f.id === id ? { ...f, [key]: value } : f));
   }
@@ -243,7 +239,7 @@ export default function ExecutiveDashboard() {
             </div>
           </section>
 
-          {/* MISSING PIPELINE RESTORED HERE */}
+          {/* PIPELINE */}
           <section className="clay-card p-6 sm:p-8 space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
               <div>
@@ -262,19 +258,21 @@ export default function ExecutiveDashboard() {
                 {filteredApps.map((app: any) => {
                   const isSelectedInSlot = app.weeklySlotId === slot.id;
                   return (
-                    <div key={app.id} onClick={() => setSelectedStudent(app)} className={`clay-pill p-5 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isSelectedInSlot ? "ring-2 ring-blue-500/50 bg-blue-50/20" : ""}`}>
-                      <div className="space-y-1.5 max-w-xl">
+                    <div key={app.id} className={`clay-pill p-5 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isSelectedInSlot ? "ring-2 ring-blue-500/50 bg-blue-50/20" : ""}`}>
+                      
+                      <div className="space-y-1.5 max-w-xl cursor-pointer" onClick={() => setSelectedStudent(app)}>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-extrabold text-[#0F2547] text-sm">{app.user?.name || "Unknown"}</h4>
+                          <h4 className="font-extrabold text-[#0F2547] text-sm hover:text-blue-600 transition-colors">{app.name}</h4>
                           <span className="text-[11px] text-slate-400">•</span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-800`}>{app.status}</span>
                         </div>
                         <p className="text-xs text-slate-700"><strong className="text-blue-700 font-bold">Subject:</strong> {app.topicInterested}</p>
                       </div>
+
                       <div className="flex flex-wrap items-center gap-2">
                         <button onClick={() => handleToggleSelect(app.id)} disabled={loading === app.id} className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all ${isSelectedInSlot ? "bg-red-100 text-red-700 hover:bg-red-200" : "clay-btn hover:bg-blue-50 text-blue-700"}`}>
                           {isSelectedInSlot ? <UserMinus className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
-                          <span>{isSelectedInSlot ? "Revoke Slot" : "Assign to Slot"}</span>
+                          <span>{isSelectedInSlot ? "Revoke Slot" : "Assign"}</span>
                         </button>
                         {app.status !== "SCREENING_DONE" && (
                           <button onClick={() => handleStatusChange(app.id, "SCREENING_DONE")} className="clay-btn px-2.5 py-1.5 text-[11px] text-purple-700 hover:bg-purple-50" title="Approve Screening">
@@ -316,9 +314,7 @@ export default function ExecutiveDashboard() {
                 <Clock className="w-5 h-5 text-amber-500 shrink-0" />
                 <p><strong>Maker-Checker Policy:</strong> If you modify the default template below, it will not go live until the Supreme Admin approves the change request.</p>
               </div>
-              
               <textarea rows={10} value={screeningTemplate} onChange={(e) => setScreeningTemplate(e.target.value)} className="clay-input w-full px-4 py-3 text-sm font-sans leading-relaxed whitespace-pre-wrap" />
-
               <div className="flex flex-wrap justify-end gap-3 pt-2">
                 <button onClick={handleRequestTemplateChange} disabled={loading === "request-template"} className="clay-btn px-6 py-3.5 text-sm font-bold text-amber-700 hover:text-amber-800 border border-amber-200">
                   Submit Template for Review
@@ -353,7 +349,7 @@ export default function ExecutiveDashboard() {
         </section>
       )}
 
-      {/* ================= TAB 3: SETTINGS (FULL FORM BUILDER RESTORED) ================= */}
+      {/* ================= TAB 3: SETTINGS ================= */}
       {activeTab === "SETTINGS" && (
         <section className="clay-card p-6 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 mb-6 gap-4">
@@ -362,18 +358,10 @@ export default function ExecutiveDashboard() {
               <p className="text-xs text-slate-500 mt-1">Design the application form. Changes must be approved by Supreme Admin.</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => addField("TEXT")} className="clay-btn px-3 py-2 text-[11px] font-bold text-slate-600 flex items-center gap-1">
-                <Type className="w-3.5 h-3.5" /> + Text
-              </button>
-              <button onClick={() => addField("DROPDOWN")} className="clay-btn px-3 py-2 text-[11px] font-bold text-slate-600 flex items-center gap-1">
-                <List className="w-3.5 h-3.5" /> + Dropdown
-              </button>
-              <button onClick={() => addField("CHECKBOX")} className="clay-btn px-3 py-2 text-[11px] font-bold text-slate-600 flex items-center gap-1">
-                <CheckSquare className="w-3.5 h-3.5" /> + Checkbox
-              </button>
-              <button onClick={() => addField("FILE_UPLOAD")} className="clay-btn px-3 py-2 text-[11px] font-bold text-slate-600 flex items-center gap-1">
-                <Upload className="w-3.5 h-3.5" /> + File
-              </button>
+              <button onClick={() => addField("TEXT")} className="clay-btn px-3 py-2 text-[11px] font-bold text-slate-600 flex items-center gap-1"><Type className="w-3.5 h-3.5" /> + Text</button>
+              <button onClick={() => addField("DROPDOWN")} className="clay-btn px-3 py-2 text-[11px] font-bold text-slate-600 flex items-center gap-1"><List className="w-3.5 h-3.5" /> + Dropdown</button>
+              <button onClick={() => addField("CHECKBOX")} className="clay-btn px-3 py-2 text-[11px] font-bold text-slate-600 flex items-center gap-1"><CheckSquare className="w-3.5 h-3.5" /> + Checkbox</button>
+              <button onClick={() => addField("FILE_UPLOAD")} className="clay-btn px-3 py-2 text-[11px] font-bold text-slate-600 flex items-center gap-1"><Upload className="w-3.5 h-3.5" /> + File</button>
             </div>
           </div>
 
@@ -406,20 +394,14 @@ export default function ExecutiveDashboard() {
                   <div className="flex-1 space-y-3">
                     <div>
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Question / Field Name</label>
-                      <input 
-                        type="text" value={field.fieldLabel} 
-                        onChange={(e) => updateField(field.id, "fieldLabel", e.target.value)}
-                        className="clay-input w-full px-3 py-2 text-sm font-bold text-slate-800"
-                      />
+                      <input type="text" value={field.fieldLabel} onChange={(e) => updateField(field.id, "fieldLabel", e.target.value)} className="clay-input w-full px-3 py-2 text-sm font-bold text-slate-800" />
                     </div>
-
                     {field.fieldType === "TEXT" && (
                       <div>
                         <label className="text-[10px] font-bold text-blue-600 uppercase tracking-wider ml-1">Word Limit (0 = No limit)</label>
                         <input type="number" value={field.wordLimit || 0} onChange={(e) => updateField(field.id, "wordLimit", Number(e.target.value))} className="clay-input w-full md:w-1/3 px-3 py-1.5 text-xs" />
                       </div>
                     )}
-
                     {(field.fieldType === "DROPDOWN" || field.fieldType === "CHECKBOX") && (
                       <div className="pl-2 border-l-2 border-purple-200 space-y-2">
                         <label className="text-[10px] font-bold text-purple-600 uppercase tracking-wider ml-1">Options</label>
@@ -433,20 +415,16 @@ export default function ExecutiveDashboard() {
                       </div>
                     )}
                   </div>
-
                   <div className="flex md:flex-col items-center justify-between md:justify-center gap-4 md:w-32 md:border-l border-slate-200 md:pl-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={field.isRequired} onChange={(e) => updateField(field.id, "isRequired", e.target.checked)} className="w-4 h-4 text-blue-600 rounded" />
                       <span className="text-xs font-bold text-slate-600">Required</span>
                     </label>
-                    <button onClick={() => removeField(field.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors">
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                    <button onClick={() => removeField(field.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Trash2 className="w-5 h-5" /></button>
                   </div>
                 </div>
               ))}
             </div>
-
             <div className="flex justify-end pt-6 mt-4 border-t border-slate-200">
               <button onClick={handleRequestFormChange} disabled={loading === "request-form"} className="clay-btn px-8 py-3.5 text-sm uppercase tracking-wider font-bold text-amber-700 bg-amber-50 border border-amber-200 flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4" />
@@ -456,6 +434,7 @@ export default function ExecutiveDashboard() {
           </div>
         </section>
       )}
+      
       {/* --- STUDENT DETAILS POPUP MODAL --- */}
         {selectedStudent && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
@@ -478,20 +457,13 @@ export default function ExecutiveDashboard() {
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Basic Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="clay-inset p-4 rounded-xl">
-                    <span className="text-[10px] font-black text-slate-400 uppercase">
-                      Selected Topic
-                    </span>
-                    <p className="text-sm font-bold text-blue-700 mt-1">
-                      {selectedStudent.topic || selectedStudent.topicInterested}
-                    </p>
+                    <span className="text-[10px] font-black text-slate-400 uppercase">Selected Topic</span>
+                    <p className="text-sm font-bold text-blue-700 mt-1">{selectedStudent.topic || selectedStudent.topicInterested}</p>
                   </div>
                   <div className="clay-inset p-4 rounded-xl">
-                    <span className="text-[10px] font-black text-slate-400 uppercase">
-                      Applied On
-                    </span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase">Applied On</span>
                     <p className="text-sm font-bold text-slate-700 mt-1">
                       {selectedStudent.date || new Date(selectedStudent.appliedAt).toLocaleDateString()}
                     </p>
@@ -505,7 +477,6 @@ export default function ExecutiveDashboard() {
                   </h4>
                   <div className="space-y-4">
                     {(() => {
-                      // Attempt to parse dynamic JSON data
                       let parsedData = {};
                       try {
                         const rawData = selectedStudent.description || selectedStudent.dynamicData;
@@ -514,7 +485,6 @@ export default function ExecutiveDashboard() {
                         parsedData = { "Raw Input": selectedStudent.description || "No data provided." };
                       }
 
-                      // Filter out empty or hidden fields (like Next.js action tokens)
                       const entries = Object.entries(parsedData).filter(([key, value]) => !key.startsWith('$ACTION_'));
 
                       if (entries.length === 0) {

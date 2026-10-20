@@ -49,11 +49,10 @@ model Application {
   id              String         @id @default(cuid())
   userId          String
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course          String?        // Made Optional
-  semester        String?        // Made Optional
+  course          String?        // Wapas add kiya (UI ke liye)
+  semester        String?        // Wapas add kiya (UI ke liye)
   topicInterested String         @default("Dynamic Topic") 
-  pastExperience  String?        
-  dynamicData     String?        // NAYA FIELD: Form ka saara data yahan aayega
+  dynamicData     String?        // Saara data isme jayega
   status          AppStatus      @default(WAITING)
   appliedAt       DateTime       @default(now())
   hasNudged       Boolean        @default(false)

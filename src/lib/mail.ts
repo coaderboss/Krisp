@@ -1,19 +1,18 @@
 import nodemailer from "nodemailer";
 
+// --- FIX: SINGLETON TRANSPORTER (Saves Server Memory & SMTP Quota) ---
+export const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_EMAIL,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
+
 export const sendVerificationEmail = async (email: string, token: string) => {
   const domain = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const confirmLink = `${domain}/verify-email?token=${token}`;
 
-  // Gmail SMTP Server connect karna
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_EMAIL,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
-
-  // Mail bhejna
   await transporter.sendMail({
     from: `"Cybersecurity Club CSJMU" <${process.env.GMAIL_EMAIL}>`,
     to: email,
@@ -30,14 +29,6 @@ export const sendVerificationEmail = async (email: string, token: string) => {
 };
 
 export const sendTwoFactorTokenEmail = async (email: string, token: string) => {
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_EMAIL,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
-
   await transporter.sendMail({
     from: `"Cybersecurity Club Admin Security" <${process.env.GMAIL_EMAIL}>`,
     to: email,

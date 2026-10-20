@@ -97,9 +97,18 @@ export async function generateAdminOTP(formData: FormData) {
 
   if (!email || !password) return { error: "Both email and password are required to proceed." };
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || user.role !== "CLUB_ADMIN") {
-    return { error: "Access Denied: This account lacks administrative privileges." };
+  // --- SECURITY FIX: Supreme Admin Lockout Fix & Strict Verification ---
+  if (email === process.env.ADMIN_EMAIL) {
+    if (password !== process.env.ADMIN_PASSWORD) return { error: "Invalid credentials." };
+  } else {
+    // Normal Club Admin verification
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.role !== "CLUB_ADMIN") {
+      return { error: "Access Denied: This account lacks administrative privileges." };
+    }
+    if (!user.password || !(await bcrypt.compare(password, user.password))) {
+      return { error: "Invalid credentials." };
+    }
   }
 
   try {
@@ -107,11 +116,7 @@ export async function generateAdminOTP(formData: FormData) {
     const expires = new Date(new Date().getTime() + 10 * 60 * 1000); 
 
     await prisma.twoFactorToken.deleteMany({ where: { email } });
-
-    await prisma.twoFactorToken.create({
-      data: { email, token, expires }
-    });
-
+    await prisma.twoFactorToken.create({ data: { email, token, expires } });
     await sendTwoFactorTokenEmail(email, token);
 
     return { success: true, message: "A secure verification code has been dispatched to your email." };

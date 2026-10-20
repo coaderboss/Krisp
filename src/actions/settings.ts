@@ -4,12 +4,22 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import nodemailer from "nodemailer";
+import { transporter } from "@/lib/mail";
 
 // Guard for Admin Operations
 async function requireAdmin() {
   const session = await auth();
   if (session?.user?.role !== "CLUB_ADMIN" && session?.user?.role !== "EXECUTIVE") {
     throw new Error("Unauthorized: Appropriate rights required.");
+  }
+  return session;
+}
+
+// Guard ONLY for Supreme Admin
+async function requireSupremeAdmin() {
+  const session = await auth();
+  if (session?.user?.role !== "CLUB_ADMIN") {
+    throw new Error("Security Alert: Only Supreme Admin can perform this action.");
   }
   return session;
 }
@@ -47,7 +57,7 @@ export async function saveFormFields(fields: any[]) {
       })
     ]);
 
-    revalidatePath("/"); // Update the student frontend instantly
+    revalidatePath("/dashboard"); // FIX 3: Sahi dashboard path update karna
     revalidatePath("/admin");
     return { success: true, message: "Form successfully published! Students will now see this exact form." };
   } catch (error) {
@@ -79,7 +89,7 @@ export async function getPendingExecutives() {
 }
 
 export async function updateExecutiveApproval(userId: string, isApproved: boolean) {
-  await requireAdmin();
+  await requireSupremeAdmin(); // SECURITY FIX: Sirf Supreme Admin approve karega!
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return { error: "User not found." };
@@ -90,12 +100,7 @@ export async function updateExecutiveApproval(userId: string, isApproved: boolea
         data: { isApproved: true }
       });
 
-      // Send Approval Email
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: process.env.GMAIL_EMAIL, pass: process.env.GMAIL_APP_PASSWORD },
-      });
-
+      // FIX: Using global transporter
       await transporter.sendMail({
         from: `"Club Admin" <${process.env.GMAIL_EMAIL}>`,
         to: user.email,

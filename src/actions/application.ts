@@ -33,7 +33,6 @@ export async function submitApplication(formData: FormData) {
         course,
         semester,
         topicInterested,
-        pastExperience: pastExperience || "None",
         status: "WAITING"
       }
     });

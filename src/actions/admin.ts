@@ -4,12 +4,22 @@ import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import nodemailer from "nodemailer";
 import { AppStatus } from "@prisma/client";
+import { transporter } from "@/lib/mail";
 
-// Guard: Only CLUB_ADMIN can run these actions
+// Guard: Regular Executives & Admin
 async function requireAdmin() {
   const session = await auth();
   if (session?.user?.role !== "CLUB_ADMIN" && session?.user?.role !== "EXECUTIVE") {
     throw new Error("Unauthorized: Appropriate rights required.");
+  }
+  return session;
+}
+
+// SECURITY FIX: Guard ONLY for Supreme Admin
+async function requireSupremeAdmin() {
+  const session = await auth();
+  if (session?.user?.role !== "CLUB_ADMIN") {
+    throw new Error("Security Alert: Only Supreme Admin can perform this action.");
   }
   return session;
 }
@@ -19,7 +29,6 @@ export async function getOrCreateCurrentSlot() {
   await requireAdmin();
   const now = new Date();
   
-  // Find currently open or published slot
   let slot = await prisma.weeklySlot.findFirst({
     where: { isPublished: true },
     include: { selectedTrainees: { include: { user: true } } },
@@ -27,7 +36,6 @@ export async function getOrCreateCurrentSlot() {
   });
 
   if (!slot) {
-    // If no published slot, find most recent slot
     slot = await prisma.weeklySlot.findFirst({
       include: { selectedTrainees: { include: { user: true } } },
       orderBy: { weekStartDate: "desc" },
@@ -50,7 +58,7 @@ export async function getOrCreateCurrentSlot() {
   return slot;
 }
 
-// 2. Auto-Queue: Automatically select the oldest 2 waiting applicants
+// 2. Auto-Queue
 export async function runAutoQueue(slotId: string) {
   await requireAdmin();
 
@@ -66,7 +74,6 @@ export async function runAutoQueue(slotId: string) {
   
   if (needed <= 0) return { error: "This slot has already reached the maximum capacity of 2 presenters." };
 
-  // Fetch oldest WAITING applications (FIFO Queue)
   const waitingApps = await prisma.application.findMany({
     where: { status: "WAITING" },
     orderBy: { appliedAt: "asc" },
@@ -92,7 +99,7 @@ export async function runAutoQueue(slotId: string) {
   return { success: true, count: waitingApps.length };
 }
 
-// 3. Manual Pick / Remove Student for Slot
+// 3. Manual Pick / Remove Student
 export async function toggleStudentSelection(applicationId: string, slotId: string) {
   await requireAdmin();
 
@@ -100,13 +107,11 @@ export async function toggleStudentSelection(applicationId: string, slotId: stri
   if (!app) return { error: "Application record could not be found." };
 
   if (app.weeklySlotId === slotId) {
-    // Deselect
     await prisma.application.update({
       where: { id: applicationId },
       data: { weeklySlotId: null, status: "WAITING" },
     });
   } else {
-    // Check if slot already has 2 presenters
     const count = await prisma.application.count({ where: { weeklySlotId: slotId } });
     if (count >= 2) {
       return { error: "A maximum of 2 students can be assigned to a single weekly slot." };
@@ -123,7 +128,7 @@ export async function toggleStudentSelection(applicationId: string, slotId: stri
   return { success: true };
 }
 
-// 4. Update Status (WAITING, SHORTLISTED, SCREENING_DONE, COMPLETED, REJECTED)
+// 4. Update Status
 export async function updateApplicationStatus(applicationId: string, status: AppStatus) {
   await requireAdmin();
 
@@ -137,9 +142,9 @@ export async function updateApplicationStatus(applicationId: string, status: App
   return { success: true };
 }
 
-// 5. Toggle Publish on Program Home Page
+// 5. Toggle Publish
 export async function toggleSlotPublish(slotId: string, isPublished: boolean) {
-  await requireAdmin();
+  await requireSupremeAdmin(); // SECURITY FIX: Locked to CLUB_ADMIN
 
   await prisma.weeklySlot.update({
     where: { id: slotId },
@@ -153,7 +158,7 @@ export async function toggleSlotPublish(slotId: string, isPublished: boolean) {
 
 // 6. Update Slot Theme
 export async function updateSlotTheme(slotId: string, theme: string) {
-  await requireAdmin();
+  await requireSupremeAdmin(); // SECURITY FIX: Locked to CLUB_ADMIN
 
   await prisma.weeklySlot.update({
     where: { id: slotId },
@@ -164,8 +169,6 @@ export async function updateSlotTheme(slotId: string, theme: string) {
   revalidatePath("/");
   return { success: true };
 }
-
-// Add this inside src/actions/admin.ts
 
 // 7. Dispatch Editable Screening Invites
 export async function sendInvitesToShortlisted(slotId: string, customHtmlTemplate: string) {
@@ -182,14 +185,6 @@ export async function sendInvitesToShortlisted(slotId: string, customHtmlTemplat
     return { error: "No shortlisted presenters found in the active slot." };
   }
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_EMAIL,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
-
   const emailsSent = [];
 
   for (const trainee of slot.selectedTrainees) {
@@ -197,12 +192,12 @@ export async function sendInvitesToShortlisted(slotId: string, customHtmlTemplat
     const studentName = trainee.user.name;
     const topic = trainee.topicInterested;
 
-    // Dynamically replace variables in the admin's custom HTML
     const personalizedHtml = customHtmlTemplate
       .replace(/{{name}}/g, studentName)
       .replace(/{{topic}}/g, topic);
 
     try {
+      // FIX: Using global transporter to save server memory
       await transporter.sendMail({
         from: `"Cybersecurity Club CSJMU" <${process.env.GMAIL_EMAIL}>`,
         to: studentEmail,
@@ -222,19 +217,11 @@ export async function sendInvitesToShortlisted(slotId: string, customHtmlTemplat
   };
 }
 
-// 8. Dispatch Mass Emails (Spreadsheet Style)
+// 8. Dispatch Mass Emails
 export async function sendMassEmails(recipients: { name: string; email: string }[], subject: string, customHtmlTemplate: string) {
   await requireAdmin();
 
   if (!recipients || recipients.length === 0) return { error: "No recipients provided." };
-
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_EMAIL,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
 
   let successCount = 0;
 
@@ -244,6 +231,7 @@ export async function sendMassEmails(recipients: { name: string; email: string }
     const personalizedHtml = customHtmlTemplate.replace(/{{name}}/g, person.name);
 
     try {
+      // FIX: Using global transporter to save server memory
       await transporter.sendMail({
         from: `"Cybersecurity Club CSJMU" <${process.env.GMAIL_EMAIL}>`,
         to: person.email,
@@ -266,15 +254,8 @@ export async function sendMassEmails(recipients: { name: string; email: string }
 export async function sendDirectEmail(email: string, subject: string, htmlBody: string) {
   await requireAdmin();
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.GMAIL_EMAIL,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
-
   try {
+    // FIX: Using global transporter to save server memory
     await transporter.sendMail({
       from: `"Cybersecurity Club CSJMU" <${process.env.GMAIL_EMAIL}>`,
       to: email,
@@ -287,13 +268,21 @@ export async function sendDirectEmail(email: string, subject: string, htmlBody: 
   }
 }
 
+// 10. Fetch Applications (TYPESCRIPT CRASH FIXED)
 export async function fetchAllApplications() {
   try {
     const apps = await prisma.application.findMany({
       include: { user: true },
       orderBy: { appliedAt: "desc" }
     });
-    return { success: true, data: apps };
+
+    // Data will flow entirely from dynamicData
+    const fixedApps = apps.map(app => ({
+      ...app,
+      dynamicData: app.dynamicData
+    }));
+
+    return { success: true, data: fixedApps };
   } catch (error) {
     return { error: "Failed to fetch applications." };
   }

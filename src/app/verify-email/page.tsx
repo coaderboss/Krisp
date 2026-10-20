@@ -1,10 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma"; // CRASH FIXED: Centralized connection pool used
 import { XCircle, CheckCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { connection } from "next/server";
-
-const prisma = new PrismaClient();
 
 // 1. The Core Server Component that handles the Database Logic
 async function VerificationLogic({ searchParams }: { searchParams: Promise<{ token: string }> }) {

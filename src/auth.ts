@@ -47,11 +47,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email === process.env.ADMIN_EMAIL && 
           password === process.env.ADMIN_PASSWORD
         ) {
+          // BUG FIX: Ghost Admin Issue
+          // Agar Supreme Admin database me nahi hai, to usko create karo taaki valid ID mile
+          let superAdmin = await prisma.user.findUnique({ where: { email } });
+          
+          if (!superAdmin) {
+            superAdmin = await prisma.user.create({
+              data: {
+                email: email,
+                name: "Supreme Admin",
+                role: "CLUB_ADMIN",
+                emailVerified: new Date(),
+                isApproved: true,
+              }
+            });
+          }
+
           return {
-            id: "supreme-admin-1",
-            name: "Supreme Admin",
-            email: email,
-            role: "CLUB_ADMIN",
+            id: superAdmin.id,
+            name: superAdmin.name,
+            email: superAdmin.email,
+            role: superAdmin.role,
           };
         }
 
@@ -65,9 +81,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const passwordsMatch = await bcrypt.compare(password, user.password);
 
         if (passwordsMatch) {
-          // Guard: If the user is an Executive, they MUST be approved by the Admin
+          // Guard 1: If the user is an Executive, they MUST be approved by the Admin
           if (user.role === "EXECUTIVE" && !user.isApproved) {
-            return null; // Deny login if not approved yet
+            throw new Error("ExecutiveNotApproved"); // Deny login if not approved yet
+          }
+
+          // Guard 2: SECURITY FIX - Students MUST have a verified email to prevent API bypass
+          if (user.role === "STUDENT" && !user.emailVerified) {
+            throw new Error("UnverifiedEmail"); // Strictly block unverified logins
           }
 
           return {

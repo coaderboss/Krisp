@@ -9,8 +9,8 @@ import SettingsTab from "@/components/admin/SettingsTab";
 
 type Trainee = {
   id: string;
-  course: string;
-  semester: string;
+  course?: string | null;     
+  semester?: string | null;   
   topicInterested: string;
   status: string;
   appliedAt: Date;
