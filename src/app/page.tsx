@@ -43,23 +43,23 @@ export default async function HomePage() {
   const activeTrainees = activeSlot?.selectedTrainees || [];
 
   return (
-    <div className="space-y-10 pb-12">
+    <div className="space-y-6 sm:space-y-10 pb-12">
       {/* 1. HERO SECTION */}
-      <section className="clay-card p-6 sm:p-10 relative overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <section className="clay-card p-5 sm:p-8 md:p-10 relative overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
           {/* Hero Left Content */}
-          <div className="lg:col-span-7 space-y-5">
+          <div className="lg:col-span-7 space-y-4 sm:space-y-5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="clay-badge-blue px-3 py-1 rounded-full text-xs font-extrabold tracking-wide">
+              <span className="clay-badge-blue px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-extrabold tracking-wide">
                 UIET • CSJM UNIVERSITY KANPUR
               </span>
-              <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+              <span className="text-[11px] sm:text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
                 Learn • Communicate • Present • Grow
               </span>
             </div>
 
             <div className="space-y-2">
-              <h1 className="text-3xl sm:text-5xl font-extrabold text-[#0F2547] tracking-tight leading-tight">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold text-[#0F2547] tracking-tight leading-tight">
                 Weekly Cybersecurity <br />
                 <span className="text-blue-600">Video Bulletin</span>
               </h1>
@@ -70,7 +70,7 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-2xl">
+            <p className="text-slate-600 text-xs sm:text-base leading-relaxed max-w-2xl">
               A continuous initiative where students get the opportunity to research a{" "}
               <strong className="text-slate-900 font-semibold">cybersecurity topic</strong>, present it in our{" "}
               <strong className="text-slate-900 font-semibold">Weekly Video Bulletin</strong>, and be featured on the official{" "}
@@ -78,65 +78,65 @@ export default async function HomePage() {
             </p>
 
             {/* CTAs */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Link href="/login" className="clay-btn-primary px-5 py-3 text-sm flex items-center gap-2 shadow-md hover:scale-[1.02] transition-transform">
+            <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 pt-2">
+              <Link href="/login" className="clay-btn-primary w-full sm:w-auto px-5 py-3 text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:scale-[1.02] transition-transform">
                 <Users className="w-4 h-4" />
                 <span>Enroll as Student Presenter</span>
               </Link>
-              <Link href="/admin" className="clay-btn px-5 py-3 text-sm flex items-center gap-2 hover:bg-blue-50/50">
+              <Link href="/admin" className="clay-btn w-full sm:w-auto px-5 py-3 text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-blue-50/50">
                 <Sliders className="w-4 h-4 text-slate-600" />
                 <span>Manage Weekly Shortlist (Admin)</span>
               </Link>
-              <a href="#journey" className="clay-btn px-3.5 py-3 text-xs flex items-center gap-1.5 text-slate-500 hover:text-slate-800">
+              <a href="#journey" className="clay-btn w-full sm:w-auto px-3.5 py-3 text-xs flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-800">
                 <FileText className="w-3.5 h-3.5" />
                 <span>Program Flow</span>
               </a>
             </div>
 
             {/* Live Metrics Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-4">
-              <div className="clay-pill px-3 py-2.5 text-center">
-                <p className="text-lg font-black text-blue-600">{registeredCount}</p>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Registered Pool</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 pt-4">
+              <div className="clay-pill px-2.5 sm:px-3 py-2 sm:py-2.5 text-center">
+                <p className="text-base sm:text-lg font-black text-blue-600">{registeredCount}</p>
+                <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider">Registered Pool</p>
               </div>
-              <div className="clay-pill px-3 py-2.5 text-center">
-                <p className="text-lg font-black text-amber-500">2</p>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Presenters / Week</p>
+              <div className="clay-pill px-2.5 sm:px-3 py-2 sm:py-2.5 text-center">
+                <p className="text-base sm:text-lg font-black text-amber-500">2</p>
+                <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider">Presenters / Week</p>
               </div>
-              <div className="clay-pill px-3 py-2.5 text-center">
-                <p className="text-lg font-black text-emerald-600">{activeTrainees.length}</p>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Shortlist Active</p>
+              <div className="clay-pill px-2.5 sm:px-3 py-2 sm:py-2.5 text-center">
+                <p className="text-base sm:text-lg font-black text-emerald-600">{activeTrainees.length}</p>
+                <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider">Shortlist Active</p>
               </div>
-              <div className="clay-pill px-3 py-2.5 text-center">
-                <p className="text-sm font-black text-slate-700 mt-1">Auto-Queue</p>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Default Mode</p>
+              <div className="clay-pill px-2.5 sm:px-3 py-2 sm:py-2.5 text-center">
+                <p className="text-xs sm:text-sm font-black text-slate-700 mt-1">Auto-Queue</p>
+                <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider">Default Mode</p>
               </div>
             </div>
           </div>
 
           {/* Hero Right: 3D Clay Broadcasting Card */}
-          <div className="lg:col-span-5 flex justify-center">
-            <div className="clay-navy w-full max-w-sm p-6 relative rounded-3xl border-2 border-blue-400/20 shadow-2xl space-y-5">
-              <div className="flex items-center justify-between border-b border-blue-400/20 pb-4">
+          <div className="lg:col-span-5 flex justify-center w-full">
+            <div className="clay-navy w-full max-w-sm p-5 sm:p-6 relative rounded-3xl border-2 border-blue-400/20 shadow-2xl space-y-4 sm:space-y-5">
+              <div className="flex items-center justify-between border-b border-blue-400/20 pb-3 sm:pb-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500 animate-ping" />
-                  <span className="text-xs font-extrabold tracking-wider text-blue-200 uppercase">
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500 animate-ping" />
+                  <span className="text-[11px] sm:text-xs font-extrabold tracking-wider text-blue-200 uppercase truncate max-w-[190px]">
                     {activeSlot ? `Batch: ${activeSlot.theme || "Active Week"}` : "Weekly Studio Live"}
                   </span>
                 </div>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-300/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-300/30 shrink-0">
                   Target: 2/Wk
                 </span>
               </div>
 
               {/* Graphic Mockup */}
-              <div className="clay-card bg-slate-900/60 p-5 rounded-2xl border border-white/10 text-center space-y-3">
-                <div className="w-16 h-16 mx-auto rounded-2xl clay-soft-blue flex items-center justify-center shadow-inner">
-                  <Video className="w-8 h-8 text-blue-600" />
+              <div className="clay-card bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-white/10 text-center space-y-3">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-2xl clay-soft-blue flex items-center justify-center shadow-inner">
+                  <Video className="w-7 h-7 sm:w-8 sm:h-8 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-white text-base">Studio Recording & Screening</h3>
-                  <p className="text-xs text-blue-200 mt-0.5">Fridays • 4:00 PM IST (UIET Media Cell)</p>
+                  <h3 className="font-extrabold text-white text-sm sm:text-base">Studio Recording &amp; Screening</h3>
+                  <p className="text-[11px] sm:text-xs text-blue-200 mt-0.5">Fridays • 4:00 PM IST (UIET Media Cell)</p>
                 </div>
               </div>
 
@@ -152,14 +152,14 @@ export default async function HomePage() {
       </section>
 
       {/* 2. LIVE CLUB ROSTER: THIS WEEK'S SHORTLISTED & FEATURED PRESENTERS */}
-      <section className="clay-card p-6 sm:p-8 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/80 pb-4">
+      <section className="clay-card p-5 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Live Club Roster</span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547]">
+            <h2 className="text-lg sm:text-2xl font-extrabold text-[#0F2547]">
               This Week&apos;s Shortlisted &amp; Featured Presenters
             </h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
@@ -167,7 +167,7 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <Link href="/admin" className="clay-btn px-4 py-2 text-xs flex items-center gap-1.5 hover:bg-blue-50">
+          <Link href="/admin" className="clay-btn px-4 py-2 text-xs flex items-center justify-center gap-1.5 hover:bg-blue-50 w-full sm:w-auto">
             <Sliders className="w-3.5 h-3.5" />
             <span>Update Selection in Admin</span>
           </Link>
@@ -179,23 +179,23 @@ export default async function HomePage() {
             {activeTrainees.map((trainee) => (
               <div key={trainee.id} className="clay-card p-5 space-y-3.5 bg-white/90">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 className="font-extrabold text-[#0F2547] text-base">{trainee.user.name}</h3>
-                    <p className="text-xs text-slate-500 font-medium">
+                  <div className="min-w-0">
+                    <h3 className="font-extrabold text-[#0F2547] text-base truncate">{trainee.user.name}</h3>
+                    <p className="text-xs text-slate-500 font-medium truncate">
                       {trainee.course} • {trainee.semester}
                     </p>
                   </div>
-                  <span className="clay-badge-amber px-2.5 py-1 rounded-lg text-[11px] font-black tracking-wide">
+                  <span className="clay-badge-amber px-2.5 py-1 rounded-lg text-[11px] font-black tracking-wide shrink-0">
                     {trainee.status === "SCREENING_DONE" ? "Selected (Shoot Ready)" : "Shortlisted (Screening)"}
                   </span>
                 </div>
 
-                <div className="clay-inset p-3 rounded-xl text-xs font-semibold text-slate-800">
+                <div className="clay-inset p-3 rounded-xl text-xs font-semibold text-slate-800 break-words">
                   <span className="text-blue-700 font-bold">Topic: </span>
                   {trainee.topicInterested}
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 font-medium">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 pt-1 font-medium">
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3 text-amber-500" />
                     Screening: Friday, 4:00 PM IST
@@ -229,18 +229,18 @@ export default async function HomePage() {
       </section>
 
       {/* 3. 5-STEP STUDENT PRESENTER JOURNEY */}
-      <section id="journey" className="clay-card p-6 sm:p-8 space-y-6">
+      <section id="journey" className="clay-card p-5 sm:p-8 space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-1.5">
           <span className="clay-badge-blue px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider">
             How It Works?
           </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0F2547]">5-Step Student Presenter Journey</h2>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-[#0F2547]">5-Step Student Presenter Journey</h2>
           <p className="text-xs sm:text-sm text-slate-500 italic">
             &ldquo;Same students. Real learning. Real conversations. For a safer digital world.&rdquo;
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-4 pt-2">
           {[
             {
               step: "1",
@@ -273,7 +273,7 @@ export default async function HomePage() {
               tag: "Official Recognition",
             },
           ].map((item) => (
-            <div key={item.step} className="clay-pill p-5 space-y-3 flex flex-col justify-between text-left hover:-translate-y-1 transition-transform">
+            <div key={item.step} className="clay-pill p-4 sm:p-5 space-y-3 flex flex-col justify-between text-left hover:-translate-y-1 transition-transform">
               <div className="space-y-2">
                 <div className="w-8 h-8 rounded-xl clay-btn-primary flex items-center justify-center text-xs font-black">
                   {item.step}
@@ -292,11 +292,11 @@ export default async function HomePage() {
       </section>
 
       {/* 4. THREE INFO COLUMNS (IMPORTANT POINTS, WHAT WILL YOU GAIN, WHO CAN PARTICIPATE) */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6">
         {/* Important Points */}
-        <div className="clay-card p-6 space-y-4">
+        <div className="clay-card p-5 sm:p-6 space-y-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-200">
-            <div className="w-9 h-9 rounded-xl clay-badge-amber flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl clay-badge-amber flex items-center justify-center shrink-0">
               <Award className="w-5 h-5 text-amber-700" />
             </div>
             <h3 className="font-extrabold text-base text-[#0F2547]">Important Points</h3>
@@ -322,9 +322,9 @@ export default async function HomePage() {
         </div>
 
         {/* What Will You Gain */}
-        <div className="clay-card p-6 space-y-4">
+        <div className="clay-card p-5 sm:p-6 space-y-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-200">
-            <div className="w-9 h-9 rounded-xl clay-badge-blue flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl clay-badge-blue flex items-center justify-center shrink-0">
               <Sparkles className="w-5 h-5 text-blue-700" />
             </div>
             <h3 className="font-extrabold text-base text-[#0F2547]">What Will You Gain?</h3>
@@ -346,10 +346,10 @@ export default async function HomePage() {
         </div>
 
         {/* Who Can Participate & Mini CTA */}
-        <div className="clay-card p-6 space-y-4 flex flex-col justify-between">
+        <div className="clay-card p-5 sm:p-6 space-y-4 flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center gap-2.5 pb-2 border-b border-slate-200">
-              <div className="w-9 h-9 rounded-xl clay-pill flex items-center justify-center">
+              <div className="w-9 h-9 rounded-xl clay-pill flex items-center justify-center shrink-0">
                 <Users className="w-5 h-5 text-indigo-700" />
               </div>
               <h3 className="font-extrabold text-base text-[#0F2547]">Who Can Participate?</h3>
@@ -362,7 +362,7 @@ export default async function HomePage() {
           <div className="clay-navy p-4 rounded-2xl space-y-2 mt-2">
             <p className="text-xs font-bold text-blue-200">Ready to Express Interest?</p>
             <p className="text-[11px] text-slate-300">Takes &lt;2 minutes • Stream: CSE / CSIT / Other</p>
-            <Link href="/login" className="clay-btn-primary w-full py-2 text-xs flex items-center justify-center gap-1.5 font-bold uppercase tracking-wider">
+            <Link href="/login" className="clay-btn-primary w-full py-2.5 text-xs flex items-center justify-center gap-1.5 font-bold uppercase tracking-wider">
               <span>Register Now</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -371,13 +371,13 @@ export default async function HomePage() {
       </section>
 
       {/* 5. PUBLISHED CLUB WORK: RECENT VIDEO BULLETIN EPISODES */}
-      <section className="clay-card p-6 sm:p-8 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+      <section className="clay-card p-5 sm:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
           <div>
             <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Published Club Work</span>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547]">Recent Video Bulletin Episodes</h2>
+            <h2 className="text-lg sm:text-2xl font-extrabold text-[#0F2547]">Recent Video Bulletin Episodes</h2>
           </div>
-          <Link href="/admin" className="clay-btn px-4 py-2 text-xs flex items-center gap-1.5 hover:bg-blue-50">
+          <Link href="/admin" className="clay-btn px-4 py-2 text-xs flex items-center justify-center gap-1.5 hover:bg-blue-50 w-full sm:w-auto">
             <Sliders className="w-3.5 h-3.5" />
             <span>Manage Episodes in Admin</span>
           </Link>

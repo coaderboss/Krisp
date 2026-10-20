@@ -87,22 +87,22 @@ export default function AdminDashboardClient({
   return (
     <div className="space-y-6 pb-16">
       {/* Supreme Admin Navigation Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
-        <button onClick={() => setActiveTab("WORKFLOW")} className={`px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-t-xl transition-all ${activeTab === "WORKFLOW" ? "bg-blue-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
-          <div className="flex items-center gap-2"><Video className="w-4 h-4" /> Presenter Workflow</div>
+      <div className="overflow-x-auto no-scrollbar scroll-smooth flex items-center gap-2 border-b border-slate-200 pb-2 flex-nowrap w-full">
+        <button onClick={() => setActiveTab("WORKFLOW")} className={`shrink-0 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all ${activeTab === "WORKFLOW" ? "bg-blue-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2"><Video className="w-4 h-4" /> Presenter Workflow</div>
         </button>
-        <button onClick={() => setActiveTab("TEAM")} className={`px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-t-xl transition-all ${activeTab === "TEAM" ? "bg-blue-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
-          <div className="flex items-center gap-2"><Users className="w-4 h-4" /> Team Management</div>
+        <button onClick={() => setActiveTab("TEAM")} className={`shrink-0 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all ${activeTab === "TEAM" ? "bg-blue-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2"><Users className="w-4 h-4" /> Team Management</div>
         </button>
-        <button onClick={() => setActiveTab("COMMUNICATION")} className={`px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-t-xl transition-all ${activeTab === "COMMUNICATION" ? "bg-blue-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
-          <div className="flex items-center gap-2"><Send className="w-4 h-4" /> Communication</div>
+        <button onClick={() => setActiveTab("COMMUNICATION")} className={`shrink-0 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all ${activeTab === "COMMUNICATION" ? "bg-blue-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2"><Send className="w-4 h-4" /> Communication</div>
         </button>
-        <button onClick={() => setActiveTab("SETTINGS")} className={`px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-t-xl transition-all ${activeTab === "SETTINGS" ? "bg-slate-800 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
-          <div className="flex items-center gap-2"><SettingsIcon className="w-4 h-4" /> System Settings</div>
+        <button onClick={() => setActiveTab("SETTINGS")} className={`shrink-0 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all ${activeTab === "SETTINGS" ? "bg-slate-800 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2"><SettingsIcon className="w-4 h-4" /> System Settings</div>
         </button>
         
-        <button onClick={() => setActiveTab("INBOX")} className={`ml-auto px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-t-xl transition-all ${activeTab === "INBOX" ? "bg-amber-500 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
-          <div className="flex items-center gap-2">
+        <button onClick={() => setActiveTab("INBOX")} className={`shrink-0 ml-auto px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all ${activeTab === "INBOX" ? "bg-amber-500 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Bell className="w-4 h-4" /> 
             Inbox {pendingRequests.length > 0 && <span className="bg-red-500 text-white px-1.5 rounded-full text-[10px]">{pendingRequests.length}</span>}
           </div>
@@ -115,15 +115,15 @@ export default function AdminDashboardClient({
       {activeTab === "SETTINGS" && <SettingsTab />}
 
       {activeTab === "INBOX" && (
-        <div className="clay-card p-6 sm:p-8 space-y-6">
+        <div className="clay-card p-4 sm:p-6 md:p-8 space-y-6">
           <div className="border-b border-slate-200 pb-4">
-            <h2 className="text-xl font-extrabold text-[#0F2547]">Executive Approvals Inbox</h2>
+            <h2 className="text-lg sm:text-xl font-extrabold text-[#0F2547]">Executive Approvals Inbox</h2>
             <p className="text-xs text-slate-500 mt-1">Review and execute system changes requested by your core team.</p>
           </div>
 
           <div className="space-y-4">
             {pendingRequests.length > 0 ? pendingRequests.map(req => (
-              <div key={req.id} className="clay-inset p-5 rounded-2xl flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+              <div key={req.id} className="clay-inset p-4 sm:p-5 rounded-2xl flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
                 <div>
                   <span className="px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-black uppercase rounded-lg">
                     {req.actionType.replace(/_/g, " ")}
@@ -155,23 +155,23 @@ export default function AdminDashboardClient({
       {/* SMART PAYLOAD PREVIEW MODAL (DIFF VIEWER)  */}
       {/* ========================================== */}
       {viewingPayload && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden clay-card border border-slate-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] sm:max-h-[85vh] flex flex-col overflow-hidden clay-card border border-slate-200">
             
-            <div className="bg-slate-50 p-5 border-b border-slate-200 flex items-center justify-between z-10">
+            <div className="bg-slate-50 p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between z-10">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-1 bg-blue-100 text-blue-800 text-[10px] font-black uppercase rounded-lg">
                     {viewingPayload.actionType.replace(/_/g, " ")}
                   </span>
-                  <h3 className="text-lg font-extrabold text-[#0F2547]">Changes Diff Viewer</h3>
+                  <h3 className="text-base sm:text-lg font-extrabold text-[#0F2547]">Changes Diff Viewer</h3>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">Requested by: <strong>{viewingPayload.executive.name}</strong></p>
               </div>
               <button onClick={() => setViewingPayload(null)} className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center transition-colors font-bold shadow-sm">✕</button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-50/50">
               {(() => {
                 let data = null;
                 try { data = JSON.parse(viewingPayload.payload); } 
@@ -273,14 +273,14 @@ export default function AdminDashboardClient({
               })()}
             </div>
 
-            <div className="bg-white p-5 border-t border-slate-200 flex items-center justify-end gap-3 z-10">
-              <button onClick={() => setViewingPayload(null)} className="px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+            <div className="bg-white p-4 sm:p-5 border-t border-slate-200 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 z-10">
+              <button onClick={() => setViewingPayload(null)} className="w-full sm:w-auto px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors text-center">
                 Cancel
               </button>
-              <button onClick={() => handleReject(viewingPayload.id)} disabled={loadingReqId === viewingPayload.id} className="px-5 py-2.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors flex items-center gap-2">
+              <button onClick={() => handleReject(viewingPayload.id)} disabled={loadingReqId === viewingPayload.id} className="w-full sm:w-auto px-5 py-2.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-colors flex items-center justify-center gap-2">
                 <XCircle className="w-4 h-4" /> Reject Request
               </button>
-              <button onClick={() => handleApprove(viewingPayload.id)} disabled={loadingReqId === viewingPayload.id} className="clay-btn-primary px-6 py-2.5 text-xs flex items-center gap-2 shadow-lg">
+              <button onClick={() => handleApprove(viewingPayload.id)} disabled={loadingReqId === viewingPayload.id} className="clay-btn-primary w-full sm:w-auto px-6 py-2.5 text-xs flex items-center justify-center gap-2 shadow-lg">
                 <CheckCircle className="w-4 h-4" /> {loadingReqId === viewingPayload.id ? "Approving..." : "Approve & Apply Live"}
               </button>
             </div>

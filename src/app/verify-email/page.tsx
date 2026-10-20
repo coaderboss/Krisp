@@ -41,20 +41,20 @@ async function VerificationLogic({ searchParams }: { searchParams: Promise<{ tok
   }
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-8 clay-card text-center">
-      <div className="flex justify-center mb-6">
+    <div className="max-w-md mx-auto mt-10 sm:mt-20 p-5 sm:p-8 clay-card text-center w-full">
+      <div className="flex justify-center mb-5 sm:mb-6">
         {success ? (
-          <CheckCircle className="w-16 h-16 text-emerald-500" />
+          <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 text-emerald-500" />
         ) : (
-          <XCircle className="w-16 h-16 text-red-500" />
+          <XCircle className="w-12 h-12 sm:w-16 sm:h-16 text-red-500" />
         )}
       </div>
-      <h1 className="text-2xl font-extrabold text-[#0F2547] mb-3">
+      <h1 className="text-xl sm:text-2xl font-extrabold text-[#0F2547] mb-2 sm:mb-3">
         {success ? "Email Verified!" : "Verification Failed"}
       </h1>
-      <p className="text-slate-600 mb-8 font-medium">{message}</p>
+      <p className="text-xs sm:text-sm text-slate-600 mb-6 sm:mb-8 font-medium">{message}</p>
       
-      <Link href="/login" className="clay-btn-primary px-8 py-3 text-sm font-bold uppercase tracking-wider">
+      <Link href="/login" className="clay-btn-primary inline-block w-full sm:w-auto px-8 py-3 text-xs sm:text-sm font-bold uppercase tracking-wider">
         Proceed to Login
       </Link>
     </div>
@@ -70,10 +70,10 @@ export default function VerifyEmailPage({
   return (
     <Suspense 
       fallback={
-        <div className="max-w-md mx-auto mt-20 p-8 clay-card text-center flex flex-col items-center">
-          <Loader2 className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-          <h2 className="text-xl font-bold text-[#0F2547]">Verifying Email...</h2>
-          <p className="text-sm text-slate-500 mt-2">Please wait while we check your secure token.</p>
+        <div className="max-w-md mx-auto mt-10 sm:mt-20 p-5 sm:p-8 clay-card text-center flex flex-col items-center">
+          <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 text-blue-600 animate-spin mb-4" />
+          <h2 className="text-lg sm:text-xl font-bold text-[#0F2547]">Verifying Email...</h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-2">Please wait while we check your secure token.</p>
         </div>
       }
     >

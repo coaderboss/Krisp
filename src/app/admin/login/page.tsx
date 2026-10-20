@@ -54,11 +54,11 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto mt-12 px-4">
-      <div className="clay-card p-8 relative">
+    <div className="max-w-md mx-auto mt-6 sm:mt-12 px-3 sm:px-4 w-full">
+      <div className="clay-card p-5 sm:p-8 relative">
         <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 rounded-2xl clay-navy flex items-center justify-center shadow-lg">
-            <ShieldAlert className="w-8 h-8 text-amber-400" />
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl clay-navy flex items-center justify-center shadow-lg">
+            <ShieldAlert className="w-7 h-7 sm:w-8 sm:h-8 text-amber-400" />
           </div>
         </div>
 
@@ -66,7 +66,7 @@ export default function AdminLoginPage() {
           <span className="clay-badge-amber text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-block">
             Restricted Access
           </span>
-          <h2 className="text-2xl font-extrabold text-[#0F2547]">Club Admin Portal</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547]">Club Admin Portal</h2>
         </div>
 
         {error && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold text-center border border-red-200">{error}</div>}
@@ -82,7 +82,7 @@ export default function AdminLoginPage() {
                 required
                 value={credentials.email}
                 onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
-                className="clay-input w-full px-4 py-3 text-sm"
+                className="clay-input w-full px-4 py-3 text-base sm:text-sm"
                 autoComplete="off"
               />
             </div>
@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
                 required
                 value={credentials.password}
                 onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                className="clay-input w-full px-4 py-3 text-sm"
+                className="clay-input w-full px-4 py-3 text-base sm:text-sm"
                 autoComplete="new-password"
               />
             </div>
@@ -116,7 +116,7 @@ export default function AdminLoginPage() {
                 value={otpValue}
                 onChange={(e) => setOtpValue(e.target.value)}
                 autoComplete="off" // Prevents autofill popups
-                className="clay-input w-full px-4 py-3 text-2xl tracking-[0.5em] text-center font-black text-blue-800"
+                className="clay-input w-full px-4 py-3 text-xl sm:text-2xl tracking-[0.4em] sm:tracking-[0.5em] text-center font-black text-blue-800"
                 placeholder="------"
                 autoFocus
               />

@@ -293,11 +293,10 @@ export default function SettingsTab() {
       )}
 
       {/* SECTION: EXECUTIVE APPROVALS */}
-      <div className="clay-card p-6 sm:p-8 space-y-5">
+      <div className="clay-card p-4 sm:p-6 md:p-8 space-y-5">
         <div className="border-b border-slate-200 pb-3">
-          <h2 className="text-lg font-extrabold text-[#0F2547] flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-blue-600" /> Executive Access
-            Requests
+          <h2 className="text-base sm:text-lg font-extrabold text-[#0F2547] flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-blue-600 shrink-0" /> Executive Access Requests
           </h2>
           <p className="text-xs text-slate-500 mt-1">
             Review and approve accounts requesting core team privileges.
@@ -309,26 +308,26 @@ export default function SettingsTab() {
             {pendingExecutives.map((exec) => (
               <div
                 key={exec.id}
-                className="clay-inset p-4 flex items-center justify-between rounded-xl"
+                className="clay-inset p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl"
               >
                 <div>
                   <h4 className="font-bold text-sm text-slate-800">
                     {exec.name}
                   </h4>
-                  <p className="text-xs text-slate-500">{exec.email}</p>
+                  <p className="text-xs text-slate-500 break-all sm:break-normal">{exec.email}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto justify-end">
                   <button
                     onClick={() => handleApproveExecutive(exec.id)}
                     disabled={loading === exec.id}
-                    className="clay-btn-primary px-4 py-2 text-xs font-bold"
+                    className="clay-btn-primary flex-1 sm:flex-none px-4 py-2 text-xs font-bold text-center"
                   >
                     Approve
                   </button>
                   <button
                     onClick={() => handleRejectExecutive(exec.id)}
                     disabled={loading === exec.id}
-                    className="px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg"
+                    className="flex-1 sm:flex-none px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg text-center"
                   >
                     Reject
                   </button>
@@ -347,35 +346,33 @@ export default function SettingsTab() {
       </div>
 
       {/* SECTION: FORM MANAGEMENT & DATA */}
-      <div className="clay-card p-6 sm:p-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 gap-4">
+      <div className="clay-card p-4 sm:p-6 md:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-200 pb-4 gap-4">
           <div>
-            <h2 className="text-xl font-extrabold text-[#0F2547] flex items-center gap-2">
-              <Database className="w-5 h-5 text-purple-600" /> Portal Data &
-              Forms
+            <h2 className="text-lg sm:text-xl font-extrabold text-[#0F2547] flex items-center gap-2">
+              <Database className="w-5 h-5 text-purple-600 shrink-0" /> Portal Data &amp; Forms
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Manage the live application form and export real student
-              submissions.
+              Manage the live application form and export real student submissions.
             </p>
           </div>
 
-          <div className="flex bg-slate-100 p-1 rounded-xl">
+          <div className="flex bg-slate-100 p-1 rounded-xl w-full md:w-auto overflow-x-auto no-scrollbar shrink-0">
             <button
               onClick={() => setSettingsSubTab("BUILDER")}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${settingsSubTab === "BUILDER" ? "bg-white shadow text-blue-700" : "text-slate-500"}`}
+              className={`flex-1 md:flex-none px-3.5 sm:px-4 py-2 text-xs font-bold rounded-lg transition-all text-center whitespace-nowrap shrink-0 ${settingsSubTab === "BUILDER" ? "bg-white shadow text-blue-700" : "text-slate-500"}`}
             >
               Draft / Edit Form
             </button>
             <button
               onClick={() => setSettingsSubTab("PUBLISHED")}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${settingsSubTab === "PUBLISHED" ? "bg-white shadow text-blue-700" : "text-slate-500"}`}
+              className={`flex-1 md:flex-none px-3.5 sm:px-4 py-2 text-xs font-bold rounded-lg transition-all text-center whitespace-nowrap shrink-0 ${settingsSubTab === "PUBLISHED" ? "bg-white shadow text-blue-700" : "text-slate-500"}`}
             >
               Live Published Form
             </button>
             <button
               onClick={() => setSettingsSubTab("RESPONSES")}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${settingsSubTab === "RESPONSES" ? "bg-white shadow text-blue-700" : "text-slate-500"}`}
+              className={`flex-1 md:flex-none px-3.5 sm:px-4 py-2 text-xs font-bold rounded-lg transition-all text-center whitespace-nowrap shrink-0 ${settingsSubTab === "RESPONSES" ? "bg-white shadow text-blue-700" : "text-slate-500"}`}
             >
               View Responses
             </button>
@@ -644,7 +641,7 @@ export default function SettingsTab() {
         {/* --- VIEW RESPONSES TAB --- */}
         {settingsSubTab === "RESPONSES" && (
           <div className="space-y-6 animate-in fade-in">
-            <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200 gap-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-800">
                   Total Submissions: {studentResponses.length}
@@ -655,15 +652,15 @@ export default function SettingsTab() {
               </div>
               <button
                 onClick={downloadCSV}
-                className="clay-btn-primary px-5 py-2.5 text-xs font-bold flex items-center gap-2"
+                className="clay-btn-primary w-full sm:w-auto px-5 py-2.5 text-xs font-bold flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" /> Export CSV
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto w-full rounded-xl border border-slate-200">
               {studentResponses.length > 0 ? (
-                <table className="w-full text-left border-collapse">
+                <table className="w-full min-w-[550px] text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-100 text-[10px] uppercase font-black text-slate-500 tracking-wider">
                       <th className="p-3 rounded-tl-lg">Applicant</th>
@@ -714,29 +711,29 @@ export default function SettingsTab() {
         
         {/* --- STUDENT DETAILS POPUP MODAL --- */}
         {selectedStudent && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto clay-card">
-              <div className="sticky top-0 bg-white/90 backdrop-blur-md p-5 border-b border-slate-100 flex items-center justify-between z-10">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh] overflow-y-auto clay-card">
+              <div className="sticky top-0 bg-white/90 backdrop-blur-md p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between z-10">
                 <div>
-                  <h3 className="text-xl font-extrabold text-[#0F2547]">
+                  <h3 className="text-lg sm:text-xl font-extrabold text-[#0F2547]">
                     {selectedStudent.name || selectedStudent.user?.name || "Unknown"}
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 break-all sm:break-normal">
                     {selectedStudent.email || selectedStudent.user?.email || "No email"}
                   </p>
                 </div>
                 <button
                   onClick={() => setSelectedStudent(null)}
-                  className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors font-bold"
+                  className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors font-bold shrink-0 ml-2"
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
                 {/* Basic Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="clay-inset p-4 rounded-xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="clay-inset p-3.5 sm:p-4 rounded-xl">
                     <span className="text-[10px] font-black text-slate-400 uppercase">
                       Selected Topic
                     </span>
@@ -744,7 +741,7 @@ export default function SettingsTab() {
                       {selectedStudent.topic || selectedStudent.topicInterested}
                     </p>
                   </div>
-                  <div className="clay-inset p-4 rounded-xl">
+                  <div className="clay-inset p-3.5 sm:p-4 rounded-xl">
                     <span className="text-[10px] font-black text-slate-400 uppercase">
                       Applied On
                     </span>

@@ -116,39 +116,39 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
       )}
 
       {/* Active Slot Panel */}
-      <section className="clay-card p-6 sm:p-8 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
+      <section className="clay-card p-4 sm:p-6 md:p-8 space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="clay-badge-blue px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase">Active Batch Management</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${slot.isPublished ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-amber-100 text-amber-800 border border-amber-300"}`}>
                 {slot.isPublished ? "🟢 Live on Program Home" : "🟡 Hidden from Platform"}
               </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547]">Weekly Broadcast Configuration</h2>
+            <h2 className="text-lg sm:text-2xl font-extrabold text-[#0F2547]">Weekly Broadcast Configuration</h2>
           </div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button onClick={handleTogglePublish} disabled={loading === "publish"} className={`clay-btn px-4 py-2.5 text-xs flex items-center gap-1.5 ${slot.isPublished ? "hover:bg-amber-50 text-amber-800" : "hover:bg-emerald-50 text-emerald-800"}`}>
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+            <button onClick={handleTogglePublish} disabled={loading === "publish"} className={`clay-btn flex-1 sm:flex-none px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs flex items-center justify-center gap-1.5 ${slot.isPublished ? "hover:bg-amber-50 text-amber-800" : "hover:bg-emerald-50 text-emerald-800"}`}>
               {slot.isPublished ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               <span>{slot.isPublished ? "Revoke Visibility" : "Publish to Platform"}</span>
             </button>
-            <button onClick={handleAutoQueue} disabled={loading === "auto-queue"} className="clay-btn-primary px-4 py-2.5 text-xs flex items-center gap-1.5 shadow-sm">
+            <button onClick={handleAutoQueue} disabled={loading === "auto-queue"} className="clay-btn-primary flex-1 sm:flex-none px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs flex items-center justify-center gap-1.5 shadow-sm">
               <Zap className="w-3.5 h-3.5 text-amber-300" />
               <span>{loading === "auto-queue" ? "Executing..." : "Execute Auto-Queue"}</span>
             </button>
-            <button onClick={onNavigateToComm} disabled={selectedStudents.length === 0} className="clay-btn px-4 py-2.5 text-xs flex items-center gap-1.5 hover:bg-blue-50 text-blue-700 disabled:opacity-50">
+            <button onClick={onNavigateToComm} disabled={selectedStudents.length === 0} className="clay-btn w-full sm:w-auto px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs flex items-center justify-center gap-1.5 hover:bg-blue-50 text-blue-700 disabled:opacity-50">
               <Edit3 className="w-3.5 h-3.5" />
-              <span>Review & Dispatch Invites</span>
+              <span>Review &amp; Dispatch Invites</span>
             </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
-          <div className="w-full">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+          <div className="w-full min-w-0 flex-1">
             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Weekly Theme Designation</label>
             <input type="text" value={themeText} onChange={(e) => setThemeText(e.target.value)} className="clay-input w-full px-4 py-2.5 text-xs sm:text-sm font-semibold" placeholder="e.g. Advanced Persistent Threats (APT)" />
           </div>
-          <button onClick={handleSaveTheme} disabled={loading === "theme"} className="clay-btn px-5 py-2.5 mt-5 sm:mt-5 text-xs font-bold shrink-0">
+          <button onClick={handleSaveTheme} disabled={loading === "theme"} className="clay-btn w-full sm:w-auto px-5 py-2.5 text-xs font-bold shrink-0">
             {loading === "theme" ? "Persisting..." : "Save Configuration"}
           </button>
         </div>
@@ -162,7 +162,7 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
             {[0, 1].map((index) => {
               const trainee = selectedStudents[index];
               return trainee ? (
-                <div key={trainee.id} className="clay-card p-5 bg-white/90 space-y-3 relative">
+                <div key={trainee.id} className="clay-card p-4 sm:p-5 bg-white/90 space-y-3 relative">
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="text-[10px] font-black text-blue-600 uppercase">Allocation #{index + 1}</span>
@@ -178,7 +178,7 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
                   </div>
                 </div>
               ) : (
-                <div key={index} className="clay-soft-blue p-6 rounded-2xl border-2 border-dashed border-blue-200 text-center flex flex-col items-center justify-center space-y-1.5">
+                <div key={index} className="clay-soft-blue p-5 sm:p-6 rounded-2xl border-2 border-dashed border-blue-200 text-center flex flex-col items-center justify-center space-y-1.5">
                   <span className="text-xs font-black text-slate-400">Allocation #{index + 1} (Unassigned)</span>
                   <p className="text-[11px] text-slate-500">Execute Auto-Queue or assign a candidate manually.</p>
                 </div>
@@ -189,18 +189,18 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
       </section>
 
       {/* 🚀 ADVANCED PIPELINE QUEUE PANEL */}
-      <section className="clay-card p-6 sm:p-8 space-y-6">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
+      <section className="clay-card p-4 sm:p-6 md:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
           <div>
             <span className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
               Candidate Pipeline <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">{processedApps.length} Total</span>
             </span>
-            <h3 className="text-xl font-extrabold text-[#0F2547]">Enrollment Registry</h3>
+            <h3 className="text-lg sm:text-xl font-extrabold text-[#0F2547]">Enrollment Registry</h3>
           </div>
           
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
             {/* UNIVERSAL SEARCH BAR */}
-            <div className="relative flex-1 sm:min-w-[200px]">
+            <div className="relative w-full sm:w-48 md:w-64 min-w-0">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input 
                 type="text" 
@@ -212,10 +212,12 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
             </div>
 
             {/* ISOLATE GROUPING ENGINE */}
-            <div className="relative group">
-              <button className={`clay-btn px-4 py-2 text-xs font-bold flex items-center gap-2 ${groupField ? "bg-purple-100 text-purple-800 border-purple-200" : ""}`}>
-                <Layers className="w-4 h-4" />
-                {groupField ? `Grouped by: ${groupField}` : "Isolate Grouping"}
+            <div className="relative group w-full sm:w-auto shrink-0">
+              <button className={`clay-btn w-full sm:w-auto px-4 py-2 text-xs font-bold flex items-center justify-between sm:justify-center gap-2 ${groupField ? "bg-purple-100 text-purple-800 border-purple-200" : ""}`}>
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4" />
+                  <span>{groupField ? `Grouped by: ${groupField}` : "Isolate Grouping"}</span>
+                </div>
                 <ChevronDown className="w-3 h-3" />
               </button>
               <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 shadow-xl rounded-xl p-2 hidden group-hover:block z-50">
@@ -232,9 +234,9 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
         </div>
 
         {/* STATUS FILTER BADGES */}
-        <div className="flex flex-wrap items-center gap-1.5 pb-2">
+        <div className="overflow-x-auto no-scrollbar scroll-smooth flex items-center gap-1.5 pb-2 flex-nowrap sm:flex-wrap w-full">
           {["ALL", "WAITING", "SHORTLISTED", "SCREENING_DONE", "COMPLETED", "REJECTED"].map((st) => (
-            <button key={st} onClick={() => setFilter(st)} className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${filter === st ? "clay-btn-primary shadow-sm" : "clay-btn text-slate-600 hover:text-blue-600"}`}>{st}</button>
+            <button key={st} onClick={() => setFilter(st)} className={`shrink-0 px-2.5 sm:px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${filter === st ? "clay-btn-primary shadow-sm" : "clay-btn text-slate-600 hover:text-blue-600"}`}>{st}</button>
           ))}
         </div>
 
@@ -254,14 +256,14 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
                   return (
                     <div 
                       key={app.id} 
-                      className={`clay-pill p-5 transition-all duration-500 ease-in-out transform flex flex-col md:flex-row md:items-center justify-between gap-4 
+                      className={`clay-pill p-4 sm:p-5 transition-all duration-500 ease-in-out transform flex flex-col lg:flex-row lg:items-center justify-between gap-4 
                       ${isSelectedInSlot ? "ring-2 ring-blue-500/50 bg-blue-50/20" : ""} 
                       ${app.status === "COMPLETED" ? "opacity-60 scale-[0.98] bg-slate-50 grayscale-[20%]" : "hover:scale-[1.01]"}`}
                     >
-                      <div className="space-y-2 max-w-2xl">
-                        <div className="flex items-center gap-2">
+                      <div className="space-y-2 max-w-2xl min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs font-black text-slate-300 w-5">{index + 1}.</span>
-                          <h4 className="font-extrabold text-[#0F2547] text-sm">{app.user.name}</h4>
+                          <h4 className="font-extrabold text-[#0F2547] text-sm break-words">{app.user.name}</h4>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                             app.status === "WAITING" ? "bg-amber-100 text-amber-800" :
                             app.status === "SHORTLISTED" ? "bg-blue-100 text-blue-800" :
@@ -270,7 +272,7 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
                           }`}>{app.status}</span>
                         </div>
                         
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-1 ml-7">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-1 sm:ml-7">
                           {(() => {
                             let highlights = {};
                             try { if (app.highlightedData) highlights = JSON.parse(app.highlightedData); } catch (e) {}
@@ -289,10 +291,10 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
                             );
                           })()}
                         </div>
-                        <p className="text-[11px] text-slate-400 mt-1.5 ml-7">Email: {app.user.email} • Registered: {new Date(app.appliedAt).toLocaleDateString()}</p>
+                        <p className="text-[11px] text-slate-400 mt-1.5 sm:ml-7 break-all sm:break-normal">Email: {app.user.email} • Registered: {new Date(app.appliedAt).toLocaleDateString()}</p>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-start lg:justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-200/60 shrink-0">
                         {app.status !== "COMPLETED" && (
                           <>
                             <button onClick={() => handleToggleSelect(app.id)} disabled={loading === app.id} className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-all ${

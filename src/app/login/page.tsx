@@ -111,25 +111,25 @@ export default function LoginPage() {
 
   // --- UI: MAIN PORTAL (Login / Register / Forgot Pass) ---
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4" style={{ perspective: "1000px" }}>
+    <div className="min-h-[80vh] flex items-center justify-center px-2 sm:px-4 py-6 sm:py-10 w-full overflow-x-hidden" style={{ perspective: "1000px" }}>
       <div 
-        className="max-w-md w-full clay-card p-8 sm:p-10 transition-all duration-300 transform-gpu"
+        className="max-w-md w-full clay-card p-5 sm:p-8 md:p-10 transition-all duration-300 transform-gpu"
         style={{ 
           transform: isFlipping ? "rotateY(90deg) scale(0.95)" : "rotateY(0deg) scale(1)",
           opacity: isFlipping ? 0.5 : 1
         }}
       >
-        <div className="flex justify-center mb-6">
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg transition-colors duration-300 ${showForgotPass ? "bg-purple-100" : isLogin ? "clay-navy" : "bg-amber-100"}`}>
-            {showForgotPass ? <KeyRound className="w-8 h-8 text-purple-600" /> : isLogin ? <ShieldCheck className="w-8 h-8 text-blue-400" /> : <Sparkles className="w-8 h-8 text-amber-500" />}
+        <div className="flex justify-center mb-5 sm:mb-6">
+          <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shadow-lg transition-colors duration-300 ${showForgotPass ? "bg-purple-100" : isLogin ? "clay-navy" : "bg-amber-100"}`}>
+            {showForgotPass ? <KeyRound className="w-7 h-7 sm:w-8 sm:h-8 text-purple-600" /> : isLogin ? <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8 text-blue-400" /> : <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-amber-500" />}
           </div>
         </div>
         
-        <div className="text-center mb-8 space-y-1">
+        <div className="text-center mb-6 sm:mb-8 space-y-1">
           <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${showForgotPass ? "bg-purple-100 text-purple-800" : isLogin ? "clay-badge-blue" : "clay-badge-amber"}`}>
             {showForgotPass ? "Account Recovery" : "Student Portal"}
           </span>
-          <h2 className="text-2xl font-extrabold text-[#0F2547]">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547]">
             {showForgotPass ? "Reset Password" : isLogin ? "Secure Login" : "Create Account"}
           </h2>
         </div>
@@ -148,7 +148,7 @@ export default function LoginPage() {
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 ml-1">Registered Email</label>
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
-                <input type="email" name="email" required maxLength={100} className="clay-input w-full pl-10 pr-4 py-3 text-sm font-bold text-slate-800" placeholder="student@csjmu.ac.in" />
+                <input type="email" name="email" required maxLength={100} className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm font-bold text-slate-800" placeholder="student@csjmu.ac.in" />
               </div>
               <p className="text-[10px] text-slate-500 mt-2 px-1">Ek secure magic link aapke inbox mein bheja jayega jo 15 minute ke liye valid hoga.</p>
             </div>
@@ -161,7 +161,7 @@ export default function LoginPage() {
                   <div className="relative">
                     <User className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                     {/* 🟢 DOS FIX: Max Length 50 */}
-                    <input type="text" name="name" required maxLength={50} className="clay-input w-full pl-10 pr-4 py-3 text-sm font-bold text-slate-800" placeholder="Deepak Kumar" />
+                    <input type="text" name="name" required maxLength={50} className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm font-bold text-slate-800" placeholder="Deepak Kumar" />
                   </div>
                 </div>
               )}
@@ -171,7 +171,7 @@ export default function LoginPage() {
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                   {/* 🟢 DOS FIX: Max Length 100 */}
-                  <input type="email" name="email" required maxLength={100} className="clay-input w-full pl-10 pr-4 py-3 text-sm font-bold text-slate-800" placeholder="student@csjmu.ac.in" />
+                  <input type="email" name="email" required maxLength={100} className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm font-bold text-slate-800" placeholder="student@csjmu.ac.in" />
                 </div>
               </div>
               
@@ -194,7 +194,7 @@ export default function LoginPage() {
                     maxLength={32}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="clay-input w-full pl-10 pr-4 py-3 text-sm font-bold text-slate-800" 
+                    className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm font-bold text-slate-800" 
                     placeholder="••••••••" 
                   />
                 </div>

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { resetPassword } from "@/actions/auth";
-import { ShieldCheck, Lock, ArrowRight, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Lock, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get("token");
@@ -70,19 +70,19 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
-      <div className="max-w-md w-full clay-card p-8 sm:p-10 animate-in fade-in zoom-in duration-500">
-        <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-purple-100">
-            <ShieldCheck className="w-8 h-8 text-purple-600" />
+    <div className="min-h-[80vh] flex items-center justify-center px-3 sm:px-4 py-6 sm:py-10 w-full">
+      <div className="max-w-md w-full clay-card p-5 sm:p-8 md:p-10 animate-in fade-in zoom-in duration-500">
+        <div className="flex justify-center mb-5 sm:mb-6">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shadow-lg bg-purple-100">
+            <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8 text-purple-600" />
           </div>
         </div>
 
-        <div className="text-center mb-8 space-y-1">
+        <div className="text-center mb-6 sm:mb-8 space-y-1">
           <span className="text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider bg-purple-100 text-purple-800">
             Security Protocol
           </span>
-          <h2 className="text-2xl font-extrabold text-[#0F2547]">Set New Password</h2>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547]">Set New Password</h2>
         </div>
 
         {message && (
@@ -106,7 +106,7 @@ export default function ResetPasswordPage() {
                 maxLength={32}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="clay-input w-full pl-10 pr-4 py-3 text-sm font-bold text-slate-800 disabled:opacity-50"
+                className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm font-bold text-slate-800 disabled:opacity-50"
                 placeholder="Enter new password"
               />
             </div>
@@ -138,7 +138,7 @@ export default function ResetPasswordPage() {
                 maxLength={32}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`clay-input w-full pl-10 pr-4 py-3 text-sm font-bold disabled:opacity-50 ${
+                className={`clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm font-bold disabled:opacity-50 ${
                   confirmPassword.length > 0 && password !== confirmPassword ? "text-red-600 border-red-300 bg-red-50" : "text-slate-800"
                 }`}
                 placeholder="Re-type new password"
@@ -149,7 +149,7 @@ export default function ResetPasswordPage() {
           <button
             type="submit"
             disabled={loading || !token || message?.type === "success"}
-            className="clay-btn-primary w-full py-4 mt-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+            className="clay-btn-primary w-full py-3.5 sm:py-4 mt-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
           >
             {loading ? "Updating Security Credentials..." : "Confirm & Update Password"}
             {!loading && <ArrowRight className="w-4 h-4" />}
@@ -157,5 +157,20 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[80vh] flex items-center justify-center px-4">
+        <div className="max-w-md w-full clay-card p-8 text-center flex flex-col items-center">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
+          <p className="text-xs text-slate-500 font-bold">Loading security protocol...</p>
+        </div>
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

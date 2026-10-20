@@ -18,10 +18,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} ${jakarta.variable} ${jetbrains.variable} antialiased pb-16 font-sans`}>
+    <html lang="en" className="overflow-x-hidden w-full">
+      <body className={`${inter.variable} ${jakarta.variable} ${jetbrains.variable} antialiased pb-16 font-sans min-w-[320px] w-full overflow-x-hidden`}>
         <Navbar />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 mt-8">
+        <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 mt-4 sm:mt-8 overflow-x-clip">
           {children}
         </main>
       </body>

@@ -89,21 +89,21 @@ export default function ExecutivePortal() {
   }
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center p-4 bg-transparent perspective-[2000px]">
+    <div className="min-h-[85vh] flex items-center justify-center p-3 sm:p-4 bg-transparent perspective-[2000px] w-full overflow-x-hidden">
       
       {/* THE 3D FLIP CONTAINER */}
       <div className={`relative w-full max-w-md transition-transform duration-700 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
         
         {/* ================= FRONT SIDE (LOGIN) ================= */}
-        <div className={`absolute inset-0 w-full h-full clay-card p-8 [backface-visibility:hidden] flex flex-col justify-center ${isFlipped ? 'pointer-events-none' : ''}`}>
-          <div className="text-center mb-6 space-y-1">
-            <div className="w-16 h-16 rounded-2xl clay-navy flex items-center justify-center shadow-lg mx-auto mb-4">
-              <ShieldCheck className="w-8 h-8 text-blue-400" />
+        <div className={`absolute inset-0 w-full h-full clay-card p-5 sm:p-8 [backface-visibility:hidden] flex flex-col justify-center ${isFlipped ? 'pointer-events-none' : ''}`}>
+          <div className="text-center mb-5 sm:mb-6 space-y-1">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl clay-navy flex items-center justify-center shadow-lg mx-auto mb-3 sm:mb-4">
+              <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8 text-blue-400" />
             </div>
             <span className="clay-badge-blue text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider inline-block">
               Core Team Access
             </span>
-            <h2 className="text-2xl font-extrabold text-[#0F2547]">Executive Login</h2>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547]">Executive Login</h2>
           </div>
 
           {loginError && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold text-center border border-red-200">{loginError}</div>}
@@ -115,21 +115,21 @@ export default function ExecutivePortal() {
                 <label className="block text-xs font-bold text-slate-700 mb-1 ml-1">Exact Full Name</label>
                 <div className="relative">
                   <User className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
-                  <input type="text" required value={loginCreds.name} onChange={e => setLoginCreds({...loginCreds, name: e.target.value})} className="clay-input w-full pl-10 pr-4 py-3 text-sm" placeholder="Your Name" />
+                  <input type="text" required value={loginCreds.name} onChange={e => setLoginCreds({...loginCreds, name: e.target.value})} className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm" placeholder="Your Name" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1 ml-1">Registered Email</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
-                  <input type="email" required value={loginCreds.email} onChange={e => setLoginCreds({...loginCreds, email: e.target.value})} className="clay-input w-full pl-10 pr-4 py-3 text-sm" placeholder="student@csjmu.ac.in" />
+                  <input type="email" required value={loginCreds.email} onChange={e => setLoginCreds({...loginCreds, email: e.target.value})} className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm" placeholder="student@csjmu.ac.in" />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1 ml-1">Password</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
-                  <input type="password" required value={loginCreds.password} onChange={e => setLoginCreds({...loginCreds, password: e.target.value})} className="clay-input w-full pl-10 pr-4 py-3 text-sm" placeholder="••••••••" />
+                  <input type="password" required value={loginCreds.password} onChange={e => setLoginCreds({...loginCreds, password: e.target.value})} className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm" placeholder="••••••••" />
                 </div>
               </div>
               <button type="submit" disabled={loginLoading} className="clay-btn-primary w-full py-3.5 mt-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2">
@@ -140,7 +140,7 @@ export default function ExecutivePortal() {
             <form onSubmit={handleOTPSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1 ml-1 text-center">Enter 6-Digit OTP</label>
-                <input type="text" name="otp" required maxLength={6} autoComplete="one-time-code" className="clay-input w-full px-4 py-3 text-2xl tracking-[0.5em] text-center font-black text-blue-800" placeholder="------" autoFocus />
+                <input type="text" name="otp" required maxLength={6} autoComplete="one-time-code" className="clay-input w-full px-4 py-3 text-xl sm:text-2xl tracking-[0.4em] sm:tracking-[0.5em] text-center font-black text-blue-800" placeholder="------" autoFocus />
               </div>
               <button type="submit" disabled={loginLoading} className="clay-btn-primary w-full py-3.5 mt-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2">
                 <KeyRound className="w-4 h-4" /> {loginLoading ? "Verifying..." : "Verify & Login"}
@@ -148,7 +148,7 @@ export default function ExecutivePortal() {
             </form>
           )}
 
-          <div className="mt-8 pt-4 border-t border-slate-200/80 text-center">
+          <div className="mt-6 sm:mt-8 pt-4 border-t border-slate-200/80 text-center">
             <p className="text-xs text-slate-500 font-medium">Don&apos;t have executive access?</p>
             <button type="button" onClick={() => setIsFlipped(true)} className="text-xs font-extrabold text-blue-600 hover:text-blue-800 transition-colors mt-1">
               Apply for Core Team ➔
@@ -158,15 +158,15 @@ export default function ExecutivePortal() {
 
         {/* ================= BACK SIDE (REGISTRATION) ================= */}
         {/* We use relative here to give the flip container its actual height */}
-        <div className={`relative w-full clay-card p-8 [backface-visibility:hidden] [transform:rotateY(180deg)] ${!isFlipped ? 'pointer-events-none' : ''}`}>
+        <div className={`relative w-full clay-card p-5 sm:p-8 [backface-visibility:hidden] [transform:rotateY(180deg)] ${!isFlipped ? 'pointer-events-none' : ''}`}>
           
           {regStep === "FORM" && (
             <div>
-              <div className="text-center mb-6 space-y-1">
-                <div className="w-16 h-16 rounded-2xl clay-navy flex items-center justify-center shadow-lg mx-auto mb-4">
-                  <ShieldAlert className="w-8 h-8 text-amber-400" />
+              <div className="text-center mb-5 sm:mb-6 space-y-1">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl clay-navy flex items-center justify-center shadow-lg mx-auto mb-3 sm:mb-4">
+                  <ShieldAlert className="w-7 h-7 sm:w-8 sm:h-8 text-amber-400" />
                 </div>
-                <h2 className="text-2xl font-extrabold text-[#0F2547]">Apply for Executive</h2>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547]">Apply for Executive</h2>
               </div>
 
               {regError && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-xs font-bold text-center border border-red-200">{regError}</div>}
@@ -176,28 +176,28 @@ export default function ExecutivePortal() {
                   <label className="block text-xs font-bold text-slate-700 mb-1 ml-1">Full Name</label>
                   <div className="relative">
                     <User className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
-                    <input type="text" name="name" required className="clay-input w-full pl-10 pr-4 py-3 text-sm" placeholder="John Doe" />
+                    <input type="text" name="name" required className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm" placeholder="John Doe" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1 ml-1">University Roll Number</label>
                   <div className="relative">
                     <Hash className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
-                    <input type="text" name="rollNumber" required className="clay-input w-full pl-10 pr-4 py-3 text-sm" placeholder="e.g. 2100456..." />
+                    <input type="text" name="rollNumber" required className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm" placeholder="e.g. 2100456..." />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1 ml-1">Email Address</label>
                   <div className="relative">
                     <Mail className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
-                    <input type="email" name="email" required className="clay-input w-full pl-10 pr-4 py-3 text-sm" placeholder="student@csjmu.ac.in" />
+                    <input type="email" name="email" required className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm" placeholder="student@csjmu.ac.in" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1 ml-1">Create Password</label>
                   <div className="relative">
                     <Lock className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
-                    <input type="password" name="password" required minLength={6} className="clay-input w-full pl-10 pr-4 py-3 text-sm" placeholder="••••••••" />
+                    <input type="password" name="password" required minLength={6} className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm" placeholder="••••••••" />
                   </div>
                 </div>
 
