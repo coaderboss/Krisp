@@ -270,6 +270,7 @@ export async function sendDirectEmail(email: string, subject: string, htmlBody: 
 
 // 10. Fetch Applications (TYPESCRIPT CRASH FIXED & HIGHLIGHTS ADDED)
 export async function fetchAllApplications() {
+  await requireAdmin();
   try {
     const apps = await prisma.application.findMany({
       include: { user: true },

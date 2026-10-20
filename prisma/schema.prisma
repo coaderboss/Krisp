@@ -47,7 +47,7 @@ model User {
 // Presenter Program Enrollment Application
 model Application {
   id              String         @id @default(cuid())
-  userId          String
+  userId          String         @unique
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   course          String?        // Wapas add kiya (UI ke liye)
   semester        String?        // Wapas add kiya (UI ke liye)
