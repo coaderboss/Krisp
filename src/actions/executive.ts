@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import nodemailer from "nodemailer";
-import { hash } from "bcryptjs"; // Assuming you use bcryptjs for passwords
+import { hash } from "bcryptjs"; 
 import { signIn } from "@/auth";
 import { AuthError } from "next-auth";
 
@@ -16,14 +16,13 @@ export async function registerExecutive(formData: FormData) {
     return { error: "All fields are required." };
   }
 
-// --- STRONG PASSWORD CHECK YAHAN LAGA RAHE HAIN ---
-  const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*]).{20,}$/;
+  // --- STRICT PASSWORD VALIDATION ---
+  const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$\%^&*]).{8,25}$/;
   if (!strongPasswordRegex.test(password)) {
     return { 
-      error: "Password kam se kam 20 characters ka hona chahiye aur usme 1 capital letter & 1 special character hona zaroori hai." 
+      error: "Password must be between 8 and 25 characters, and include at least 1 uppercase letter and 1 special character (!@#$%^&*)." 
     };
   }
-  // --------------------------------------------------
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
@@ -61,14 +60,14 @@ export async function registerExecutive(formData: FormData) {
   });
 
   await transporter.sendMail({
-    from: `"Cybersecurity Club" <${process.env.GMAIL_EMAIL}>`,
+    from: `"CyberKrisp Security" <${process.env.GMAIL_EMAIL}>`,
     to: email,
-    subject: "Verify Your Executive Registration",
+    subject: "Action Required: Verify Your Executive Registration",
     html: `
-      <div style="font-family: Arial; padding: 20px; text-align: center;">
-        <h2>Verify Your Email</h2>
-        <p>Click the button below to verify your email address. Keep your registration tab open!</p>
-        <a href="${verifyLink}" style="display: inline-block; padding: 12px 24px; background: #2563EB; color: white; text-decoration: none; border-radius: 8px; margin-top: 20px;">Verify Email</a>
+      <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center; max-w: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px;">
+        <h2 style="color: #0F2547;">Verify Your Email</h2>
+        <p style="color: #475569; font-size: 15px;">Click the button below to verify your email address. Please keep your registration tab open.</p>
+        <a href="${verifyLink}" style="display: inline-block; padding: 12px 24px; background: #2563EB; color: white; text-decoration: none; border-radius: 8px; margin-top: 20px; font-weight: bold;">Verify Email</a>
       </div>
     `,
   });
@@ -76,7 +75,7 @@ export async function registerExecutive(formData: FormData) {
   return { success: true, userId: newUser.id, email: newUser.email };
 }
 
-// Frontend use karega continuously check karne ke liye
+// Polling mechanism for frontend to check verification status
 export async function checkVerificationStatus(email: string) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (user && user.emailVerified) {
@@ -91,27 +90,27 @@ export async function generateExecutiveOTP(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
-  if (!name || !email || !password) return { error: "Name, Email, aur Password teeno zaroori hain." };
+  if (!name || !email || !password) {
+    return { error: "Name, Email, and Password are all required." };
+  }
 
   // 1. Find User by Email
   const user = await prisma.user.findUnique({ where: { email } });
   
   if (!user || user.role !== "EXECUTIVE") {
-    return { error: "Access Denied: Executive account nahi mila." };
+    return { error: "Access Denied: Executive account not found." };
   }
 
   // 2. Exact Name Match (Case insensitive check)
-  if (user.name.toLowerCase().trim() !== name.toLowerCase().trim()) {
-    return { error: "Invalid Credentials: Name match nahi hua." };
+  if (user.name?.toLowerCase().trim() !== name.toLowerCase().trim()) {
+    return { error: "Invalid Credentials: Name does not match the registered account." };
   }
 
   // 3. Approval Check
   if (!user.isApproved) {
-    return { error: "Account abhi Supreme Admin dwara approve nahi hua hai." };
+    return { error: "Access Denied: Your account is pending approval from the Supreme Admin." };
   }
 
-  // Note: Password validation will happen in the final NextAuth signIn step, 
-  // but we can generate OTP now if the basic fields match.
   try {
     const token = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date(new Date().getTime() + 10 * 60 * 1000); 
@@ -125,19 +124,22 @@ export async function generateExecutiveOTP(formData: FormData) {
     });
 
     await transporter.sendMail({
-      from: `"Executive Security" <${process.env.GMAIL_EMAIL}>`,
+      from: `"CyberKrisp Security" <${process.env.GMAIL_EMAIL}>`,
       to: email,
-      subject: "🔒 Your Executive Login OTP",
-      html: `<div style="font-family: Arial; padding: 20px;">
-              <h2>Executive Authentication</h2>
-              <p>Aapka login OTP niche diya gaya hai:</p>
-              <h1 style="letter-spacing: 5px; color: #2563EB;">${token}</h1>
-            </div>`,
+      subject: "🔒 Your Executive Login Verification Code",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center; max-w: 400px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px;">
+          <h2 style="color: #0F2547;">Executive Authentication</h2>
+          <p style="color: #475569; font-size: 14px;">Your secure login OTP is provided below. This code will expire in 10 minutes.</p>
+          <h1 style="letter-spacing: 5px; color: #2563EB; background: #f1f5f9; padding: 15px; border-radius: 8px;">${token}</h1>
+        </div>
+      `,
     });
 
-    return { success: true, message: "OTP sent to your email!" };
+    return { success: true, message: "A secure verification code has been dispatched to your email." };
   } catch (error) {
-    return { error: "OTP bhejne mein error aayi." };
+    console.error("Executive OTP Dispatch Error:", error);
+    return { error: "Failed to dispatch the verification code. Please try again." };
   }
 }
 
@@ -146,14 +148,17 @@ export async function verifyExecutiveOTPAndLogin(formData: FormData) {
   const password = formData.get("password") as string;
   const otp = formData.get("otp") as string;
 
-  if (!otp) return { error: "OTP zaroori hai!" };
+  if (!otp) return { error: "Verification code is required." };
 
   const existingToken = await prisma.twoFactorToken.findFirst({
     where: { email, token: otp }
   });
 
-  if (!existingToken) return { error: "Invalid OTP!" };
-  if (new Date(existingToken.expires) < new Date()) return { error: "OTP expire ho gaya hai." };
+  if (!existingToken) return { error: "The provided verification code is invalid." };
+  
+  if (new Date(existingToken.expires) < new Date()) {
+    return { error: "The verification code has expired. Please request a new one." };
+  }
 
   await prisma.twoFactorToken.delete({ where: { id: existingToken.id } });
 
@@ -162,7 +167,7 @@ export async function verifyExecutiveOTPAndLogin(formData: FormData) {
     await signIn("credentials", { email, password, redirectTo: "/executive/dashboard" });
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: "Authentication failed. Password galat ho sakta hai." };
+      return { error: "Authentication failed. Invalid credentials provided." };
     }
     throw error;
   }

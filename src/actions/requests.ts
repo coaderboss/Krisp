@@ -17,7 +17,7 @@ export async function submitReviewRequest(actionType: string, payload: any) {
   const session = await auth();
   
   if (!session?.user || session.user.role !== "EXECUTIVE") {
-    return { error: "Only authorized executives can submit review requests." };
+    return { error: "Access Denied: Only authorized executives can submit review requests." };
   }
 
   try {
@@ -32,11 +32,11 @@ export async function submitReviewRequest(actionType: string, payload: any) {
     return { success: true, message: "Request successfully sent to Supreme Admin for review!" };
   } catch (error) {
     console.error("Error submitting review request:", error);
-    return { error: "Failed to submit request." };
+    return { error: "Failed to submit request. Please try again later." };
   }
 }
 
-// --- NAYA: FETCH PENDING REQUESTS FOR INBOX ---
+// --- FETCH PENDING REQUESTS FOR INBOX ---
 export async function getPendingRequests() {
   await requireSupremeAdmin();
   
@@ -48,26 +48,26 @@ export async function getPendingRequests() {
     });
     return { success: true, data: requests };
   } catch (error) {
-    return { error: "Failed to fetch requests." };
+    return { error: "Failed to fetch pending requests." };
   }
 }
 
-// --- NAYA: MASTER EXECUTION ENGINE (APPROVE & APPLY) ---
+// --- MASTER EXECUTION ENGINE (APPROVE & APPLY) ---
 export async function approveRequest(requestId: string) {
   await requireSupremeAdmin();
 
   try {
     const request = await prisma.adminRequest.findUnique({ where: { id: requestId } });
-    if (!request) return { error: "Request not found." };
+    if (!request) return { error: "Review request not found." };
 
     const payload = JSON.parse(request.payload);
 
     // 1. EXECUTE THE REQUESTED ACTION
     if (request.actionType === "UPDATE_FORM") {
-      //Server-Side Guard - Maximum 4 Highlights
+      // Server-Side Guard - Maximum 4 Highlights
       const highlightedCount = payload.fields.filter((f: any) => f.isHighlighted).length;
       if (highlightedCount > 4) {
-        return { error: "Validation Error: Aap maximum 4 fields ko hi pin kar sakte hain." };
+        return { error: "Validation Error: You can pin a maximum of 4 fields to the dashboard." };
       }
 
       // Transaction: Delete old form layout and insert the new fully updated layout
@@ -92,7 +92,7 @@ export async function approveRequest(requestId: string) {
         data: { isPublished: true }
       });
     } else if (request.actionType === "UPDATE_MAIL_TEMPLATE") {
-      // 🟢 FIX: Global Mail Template ab Database me save hoga
+      // 🟢 FIX: Store Global Mail Template persistently in the database
       await prisma.clubSettings.upsert({
         where: { id: "global" },
         update: { mailTemplate: payload.template },
@@ -106,17 +106,18 @@ export async function approveRequest(requestId: string) {
       data: { status: "APPROVED" }
     });
 
-    revalidatePath("/"); // 🟢 FIX 3: Public Home page ka cache invalidate karein
+    // 🟢 FIX: Invalidate cache for the public home page and dashboard routes
+    revalidatePath("/"); 
     revalidatePath("/admin");
     revalidatePath("/dashboard");
-    return { success: true, message: "Request approved and applied to the system!" };
+    return { success: true, message: "Request approved and successfully applied to the system!" };
   } catch (error) {
     console.error("Approval Execution Error:", error);
-    return { error: "Failed to execute the approval." };
+    return { error: "Failed to execute the approval process." };
   }
 }
 
-// --- NAYA: REJECT REQUEST ---
+// --- REJECT REQUEST ---
 export async function rejectRequest(requestId: string) {
   await requireSupremeAdmin();
 
@@ -128,6 +129,6 @@ export async function rejectRequest(requestId: string) {
     revalidatePath("/admin");
     return { success: true, message: "Request has been rejected." };
   } catch (error) {
-    return { error: "Failed to reject request." };
+    return { error: "Failed to reject the request." };
   }
 }

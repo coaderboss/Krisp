@@ -55,7 +55,7 @@ export default function LoginPage() {
       if (res?.error) {
         setMessage({ text: res.error, type: "error" });
       } else {
-        setMessage({ text: "Agar email registered hai, toh reset link bhej diya gaya hai. Apna inbox check karein.", type: "success" });
+        setMessage({ text: "If the email is registered, a password reset link has been sent to your inbox. Please check your email.", type: "success" });
         setTimeout(() => setShowForgotPass(false), 5000);
       }
     } else if (isLogin) {
@@ -65,7 +65,7 @@ export default function LoginPage() {
     } else {
       // 🟢 REGISTRATION LOGIC
       if (strength < 2) {
-        setMessage({ text: "Kripya ek strong password chunein.", type: "error" });
+        setMessage({ text: "Please choose a strong password.", type: "error" });
         setLoading(false);
         return;
       }
@@ -80,7 +80,7 @@ export default function LoginPage() {
         setTimeout(() => {
           setShowVerification(false);
           setIsLogin(true);
-          setMessage({ text: "Verification successful! Ab aap login kar sakte hain.", type: "success" });
+          setMessage({ text: "Verification successful! You can login now.", type: "success" });
         }, 3000); 
       }
     }
@@ -98,7 +98,7 @@ export default function LoginPage() {
           </div>
           <h2 className="text-2xl font-extrabold text-[#0F2547] mb-2">Verifying Email...</h2>
           <p className="text-sm text-slate-500 leading-relaxed mb-6">
-            Hum aapke credentials aur college email ko secure system mein register kar rahe hain. Kripya prateeksha karein.
+            We are verifying your credentials and college email to register you on the secure system. please wait a moment.
           </p>
           <div className="flex items-center justify-center gap-2 text-blue-600 font-bold text-sm">
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -150,7 +150,7 @@ export default function LoginPage() {
                 <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                 <input type="email" name="email" required maxLength={100} className="clay-input w-full pl-10 pr-4 py-3 text-base sm:text-sm font-bold text-slate-800" placeholder="student@csjmu.ac.in" />
               </div>
-              <p className="text-[10px] text-slate-500 mt-2 px-1">Ek secure magic link aapke inbox mein bheja jayega jo 15 minute ke liye valid hoga.</p>
+              <p className="text-[10px] text-slate-500 mt-2 px-1">A secure link has been sent to your inbox. It will remain valid for 15 minutes.</p>
             </div>
           ) : (
             <>

@@ -12,13 +12,13 @@ import { transporter } from "@/lib/mail";
 export async function registerStudent(formData: FormData) {
   const name = formData.get("name") as string;
   const email = formData.get("email") as string;
- const password = formData.get("password") as string;
+  const password = formData.get("password") as string;
 
   // Strong Password Check: Min 8, Max 25 chars, 1 Uppercase, 1 Special Char
-  const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,25}$/;
+  const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$\%^&*]).{8,25}$/;
   if (!strongPasswordRegex.test(password)) {
     return { 
-      error: "Password 8 se 25 characters ke beech hona chahiye, jisme 1 Capital Letter aur 1 Special Character (!@#$&*) zaroori hai." 
+      error: "Password must be between 8 and 25 characters, and include at least 1 uppercase letter and 1 special character (!@#$%^&*)." 
     };
   }
 
@@ -31,7 +31,7 @@ export async function registerStudent(formData: FormData) {
     if (existingUser) {
       if (existingUser.emailVerified) {
         // If user exists AND is verified, block them
-        return { error: "This email is already verified and registered! Please login." };
+        return { error: "This email is already verified and registered! Please log in." };
       } else {
         // If user exists BUT is not verified, update password and resend token
         await prisma.user.update({
@@ -61,7 +61,7 @@ export async function registerStudent(formData: FormData) {
 
     return { success: true, message: "Verification email has been sent. Please check your inbox!" };
   } catch (error) {
-    console.error(error);
+    console.error("Registration Error:", error);
     return { error: "Registration failed. Please try again." };
   }
 }
@@ -74,24 +74,22 @@ export async function loginStudent(formData: FormData) {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     
     if (!existingUser || !existingUser.password) {
-      return { error: "Account nahi mila!" };
+      return { error: "Account not found. Please register first." };
     }
 
-    // Security Check: Email verify hua hai ya nahi
+    // Security Check: Verify if the email is authenticated
     if (!existingUser.emailVerified) {
-      return { error: "Kripya login karne se pehle apna email verify karein. Inbox check karein." };
+      return { error: "Please verify your email before logging in. Check your inbox for the verification link." };
     }
 
     await signIn("credentials", { email, password, redirectTo: "/dashboard" });
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: "Email ya password galat hai!" };
+      return { error: "Invalid email or password." };
     }
     throw error;
   }
 }
-
-// Replace inside src/actions/auth.ts
 
 export async function generateAdminOTP(formData: FormData) {
   const email = formData.get("email") as string;
@@ -163,7 +161,7 @@ export async function sendPasswordResetLink(formData: FormData) {
     const email = formData.get("email") as string;
     if (!email) return { error: "Email address is required." };
 
-    // 1. Find User
+    // 1. Locate User
     const user = await prisma.user.findUnique({ where: { email } });
     
     // Security Mechanism: Return success even if user is not found to prevent email enumeration attacks
@@ -175,7 +173,7 @@ export async function sendPasswordResetLink(formData: FormData) {
     const resetToken = crypto.randomBytes(32).toString("hex");
     const resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000); 
 
-    // 3. Save token in database
+    // 3. Persist token in the database
     await prisma.user.update({
       where: { email },
       data: {
@@ -184,7 +182,7 @@ export async function sendPasswordResetLink(formData: FormData) {
       }
     });
 
-    // 4. Generate Reset URL
+    // 4. Construct Reset URL
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const resetUrl = `${appUrl}/reset-password?token=${resetToken}`;
 
@@ -256,6 +254,6 @@ export async function resetPassword(formData: FormData) {
 
   } catch (error) {
     console.error("Password Reset Execution Error:", error);
-    return { error: "An error occurred while resetting your password." };
+    return { error: "An error occurred while resetting your password. Please try again." };
   }
 }

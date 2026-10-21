@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-// --- FIX: SINGLETON TRANSPORTER (Saves Server Memory & SMTP Quota) ---
+// --- SINGLETON TRANSPORTER (Optimizes Server Memory & SMTP Quota) ---
 export const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -14,15 +14,23 @@ export const sendVerificationEmail = async (email: string, token: string) => {
   const confirmLink = `${domain}/verify-email?token=${token}`;
 
   await transporter.sendMail({
-    from: `"Cybersecurity Club CSJMU" <${process.env.GMAIL_EMAIL}>`,
+    from: `"CyberKrisp Security" <${process.env.GMAIL_EMAIL}>`,
     to: email,
-    subject: "🔐 Verify your Email - Student Presenter Portal",
+    subject: "Action Required: Verify Your Email - Student Portal",
     html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #0F2547;">
-        <h2>Welcome to the Cybersecurity Club!</h2>
-        <p>Aapka account create ho gaya hai. Login karne se pehle kripya apna email verify karein:</p>
-        <a href="${confirmLink}" style="display: inline-block; padding: 12px 24px; background-color: #2563EB; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Verify Email Address</a>
-        <p style="margin-top: 20px; font-size: 12px; color: #64748B;">Ye link 1 ghante mein expire ho jayega.</p>
+      <div style="font-family: system-ui, -apple-system, sans-serif; padding: 24px; color: #0F2547; max-w: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+        <h2 style="color: #0F2547; margin-bottom: 16px;">Welcome to CyberKrisp!</h2>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+          Your account has been created successfully. Please verify your email address to complete the registration process:
+        </p>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${confirmLink}" style="display: inline-block; padding: 14px 28px; background-color: #2563EB; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+            Verify Email Address
+          </a>
+        </div>
+        <p style="margin-top: 24px; font-size: 12px; color: #64748B; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+          This secure link will expire in 1 hour. If you did not create an account, please ignore this email.
+        </p>
       </div>
     `,
   });
@@ -30,17 +38,21 @@ export const sendVerificationEmail = async (email: string, token: string) => {
 
 export const sendTwoFactorTokenEmail = async (email: string, token: string) => {
   await transporter.sendMail({
-    from: `"Cybersecurity Club Admin Security" <${process.env.GMAIL_EMAIL}>`,
+    from: `"CyberKrisp Admin Security" <${process.env.GMAIL_EMAIL}>`,
     to: email,
     subject: "🔒 2FA Code - Admin Portal Access",
     html: `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #0F2547;">
-        <h2>Admin Authentication Required</h2>
-        <p>Aapke Club Admin portal mein login karne ke liye Two-Factor Authentication code niche diya gaya hai:</p>
-        <div style="margin: 20px 0; padding: 15px; background-color: #F1F5F9; border-radius: 8px; text-align: center;">
-          <h1 style="letter-spacing: 5px; color: #2563EB; margin: 0;">${token}</h1>
+      <div style="font-family: system-ui, -apple-system, sans-serif; padding: 24px; color: #0F2547; max-w: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+        <h2 style="color: #0F2547; margin-bottom: 16px;">Admin Authentication Required</h2>
+        <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+          Your Two-Factor Authentication code for the CyberKrisp Admin portal is provided below:
+        </p>
+        <div style="margin: 24px 0; padding: 16px; background-color: #F1F5F9; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0;">
+          <h1 style="letter-spacing: 6px; color: #2563EB; margin: 0; font-size: 32px;">${token}</h1>
         </div>
-        <p style="font-size: 12px; color: #64748B;">Yeh code 10 minute mein expire ho jayega. Agar yeh request aapne nahi ki hai, toh turant apna password change karein.</p>
+        <p style="font-size: 12px; color: #64748B; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+          This code will expire in 10 minutes. If you did not initiate this request, please change your password immediately and notify the system administrator.
+        </p>
       </div>
     `,
   });

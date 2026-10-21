@@ -6,10 +6,10 @@ import { revalidatePath } from "next/cache";
 
 export async function getStudentDashboardData() {
   const session = await auth();
-  if (!session?.user) return { error: "Not logged in" };
+  if (!session?.user) return { error: "Authentication required." };
 
   try {
-    // Check if application exists (1 Student = 1 Form)
+    // Check if application exists (Strict 1:1 relation)
     const existingApp = await prisma.application.findFirst({
       where: { userId: session.user.id }
     });
@@ -32,23 +32,23 @@ export async function getStudentDashboardData() {
 
 export async function nudgeAdmin(applicationId: string) {
   const session = await auth();
-  if (!session?.user) return { error: "Unauthorized" };
+  if (!session?.user) return { error: "Unauthorized access." };
 
   try {
     const app = await prisma.application.findUnique({ where: { id: applicationId } });
-    if (!app) return { error: "Application not found" };
+    if (!app) return { error: "Application not found." };
 
     // --- SECURITY FIX: IDOR Ownership Guard ---
     if (app.userId !== session.user.id) {
-      return { error: "Unauthorized access: You cannot nudge someone else's application." };
+      return { error: "Unauthorized access: You cannot nudge an application that does not belong to you." };
     }
 
-    // --- RATE LIMITING: Week mein max 2 baar Nudge ---
+    // --- RATE LIMITING: Max 2 Nudges per week ---
     if (app.nudgeDate) {
       const daysSinceLastNudge = (new Date().getTime() - new Date(app.nudgeDate).getTime()) / (1000 * 3600 * 24);
       if (daysSinceLastNudge < 3.5) {
         return { 
-          error: `Rate Limit Exceeded: Aap week me sirf 2 baar Nudge kar sakte hain. Kripya ${Math.ceil(3.5 - daysSinceLastNudge)} din baad dubara try karein.` 
+          error: `Rate Limit Exceeded: You can only send a nudge twice a week. Please try again in ${Math.ceil(3.5 - daysSinceLastNudge)} days.` 
         };
       }
     }
@@ -59,31 +59,31 @@ export async function nudgeAdmin(applicationId: string) {
     });
     
     revalidatePath("/dashboard");
-    return { success: true, message: "Admin has been notified! Your application has been highlighted." };
+    return { success: true, message: "The administration team has been notified. Your application is now highlighted." };
   } catch (error) {
-    console.error("Nudge Error:", error);
-    return { error: "Failed to send nudge." };
+    console.error("Nudge Execution Error:", error);
+    return { error: "Failed to send the nudge request. Please try again later." };
   }
 }
 
-// Student form submission logic
+// Student form submission execution
 export async function submitStudentForm(formData: FormData) {
   const session = await auth();
-  if (!session?.user) return { error: "Unauthorized: Please login first." };
+  if (!session?.user) return { error: "Unauthorized: Please log in to submit your application." };
 
-  // --- FIX 1: DUPLICATE APPLICATION BLOCK ---
+  // --- DUPLICATE APPLICATION BLOCK ---
   const existingApp = await prisma.application.findFirst({
     where: { userId: session.user.id }
   });
   if (existingApp) {
-    return { error: "Aap already ek application submit kar chuke hain. Duplicate submissions allowed nahi hain." };
+    return { error: "You have already submitted an application. Duplicate submissions are not permitted." };
   }
 
-  // 1. Dynamic Form Data ko ek JSON object me convert karna
+  // 1. Parse dynamic form data into a structured JSON object
   const rawData: Record<string, any> = {};
   
   formData.forEach((value, key) => {
-    // --- FIX 2: FILE UPLOAD FIX ---
+    // --- FILE UPLOAD HANDLER ---
     let finalValue = value;
     if (value instanceof File) {
       if (!value.name || value.name === "undefined") return; 
@@ -102,7 +102,7 @@ export async function submitStudentForm(formData: FormData) {
   });
 
   try {
-    // --- NAYA LOGIC: Highlighted Fields (Pin to Card) Filter Karna ---
+    // --- Highlighted Fields (Pin to Card) Extraction ---
     const highlightedFields = await prisma.formField.findMany({
       where: { isHighlighted: true },
       select: { fieldLabel: true }
@@ -110,30 +110,30 @@ export async function submitStudentForm(formData: FormData) {
 
     const highlightedDataObj: Record<string, any> = {};
     highlightedFields.forEach(field => {
-      // Checkbox array name (Label[]) ko bhi handle karo
+      // Safely handle checkbox array inputs (e.g., Label[])
       const val = rawData[field.fieldLabel] ?? rawData[`${field.fieldLabel}[]`];
       if (val !== undefined) {
         highlightedDataObj[field.fieldLabel] = val;
       }
     });
 
-    // 2. Database me save karna
+    // 2. Persist application in the database
     await prisma.application.create({
       data: {
         userId: session.user.id,
         topicInterested: rawData["Choose your preffered topic"]?.toString() || rawData["Topic"]?.toString() || "Custom Application",
         dynamicData: JSON.stringify(rawData), 
-        highlightedData: Object.keys(highlightedDataObj).length > 0 ? JSON.stringify(highlightedDataObj) : null, // Sirf 4 fields yahan jayenge
+        highlightedData: Object.keys(highlightedDataObj).length > 0 ? JSON.stringify(highlightedDataObj) : null, // Limit stored to pinned items
         status: "WAITING"
       }
     });
     
-    // 3. UI update karna
+    // 3. Invalidate cache to reflect changes on the dashboard
     revalidatePath("/dashboard");
     return { success: true };
     
   } catch (error: any) {
-    console.error("Form Submit Error:", error);
-    return { error: "Database error: Form submit nahi ho paaya." };
+    console.error("Form Submission Error:", error);
+    return { error: "A database error occurred. Your application could not be submitted." };
   }
 }

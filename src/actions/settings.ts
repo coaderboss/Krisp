@@ -43,7 +43,7 @@ export async function saveFormFields(fields: any[]) {
   // --- STRICT VALIDATION: Maximum 4 fields can be highlighted ---
   const highlightedCount = fields.filter((f: any) => f.isHighlighted).length;
   if (highlightedCount > 4) {
-    return { error: "Validation Error: Aap maximum 4 fields ko hi dashboard card par pin (highlight) kar sakte hain." };
+    return { error: "Validation Error: You can pin a maximum of 4 fields to the dashboard." };
   }
   
   try {

@@ -26,8 +26,8 @@ export default async function AdminPage() {
         </div>
         <h2 className="text-2xl font-extrabold text-[#0F2547]">Admin Login Required</h2>
         <p className="text-xs text-slate-600 leading-relaxed">
-          Aapka browser abhi standard account (<strong>{session.user.email}</strong>) se logged in hai. 
-          Club Admin Console access karne ke liye kripya logout karein aur Admin account se securely login karein.
+          Your browser is currently signed in with standard account (<strong>{session.user.email}</strong>). 
+          Plese log in using an authorized Admin account to securely access the admin console.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-4">

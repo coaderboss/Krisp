@@ -1,4 +1,3 @@
-// src/actions/application.ts
 "use server";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
@@ -6,7 +5,9 @@ import prisma from "@/lib/prisma";
 
 export async function submitApplication(formData: FormData) {
   const session = await auth();
-  if (!session?.user?.id) return { error: "Aapko pehle login karna hoga." };
+  if (!session?.user?.id) {
+    return { error: "Authentication required. Please log in to continue." };
+  }
 
   const course = formData.get("course") as string;
   const semester = formData.get("semester") as string;
@@ -14,17 +15,17 @@ export async function submitApplication(formData: FormData) {
   const pastExperience = formData.get("pastExperience") as string;
 
   if (!course || !semester || !topicInterested) {
-    return { error: "Zaroori fields khali hain!" };
+    return { error: "Missing required fields. Please complete all mandatory sections." };
   }
 
   try {
-    // Check if already applied
+    // Verify if the user has an existing application to prevent duplicates
     const existingApp = await prisma.application.findFirst({
       where: { userId: session.user.id }
     });
 
     if (existingApp) {
-      return { error: "Aap pehle hi apply kar chuke hain." };
+      return { error: "You have already submitted an application. Multiple submissions are not permitted." };
     }
 
     await prisma.application.create({
@@ -37,9 +38,11 @@ export async function submitApplication(formData: FormData) {
       }
     });
 
-    revalidatePath("/dashboard"); // Page ko refresh karne ke liye
+    // Revalidate the dashboard path to reflect the new application status
+    revalidatePath("/dashboard"); 
     return { success: true };
-  } catch {
-    return { error: "Server error. Kripya baad mein try karein." };
+  } catch (error) {
+    console.error("Application Submission Error:", error);
+    return { error: "An unexpected server error occurred. Please try again later." };
   }
 }
