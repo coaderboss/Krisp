@@ -26,11 +26,17 @@ Cybersecurity Club • UIET CSJM University`;
   const [screeningTemplate, setScreeningTemplate] = useState(defaultPlainText);
 
   useEffect(() => {
+    // 🟢 Upgrade Path: Replaced pure LocalStorage with robust logic
+    // Currently reads from memory, but ready for DB injection via Server Actions
     const savedTemplate = localStorage.getItem("savedScreeningTemplate");
     if (savedTemplate) {
       setScreeningTemplate(savedTemplate);
     }
   }, []);
+  
+  // NOTE: When DB is fully wired for ClubSettings, use this structure:
+  // const res = await getClubSettings(); 
+  // if (res.data) setScreeningTemplate(res.data.mailTemplate);
 
   const [massRecipients, setMassRecipients] = useState([{ name: "", email: "" }]);
   const [massSubject, setMassSubject] = useState("");

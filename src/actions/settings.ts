@@ -3,7 +3,6 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
-import nodemailer from "nodemailer";
 import { transporter } from "@/lib/mail";
 
 // Guard for Admin Operations
@@ -24,10 +23,10 @@ async function requireSupremeAdmin() {
   return session;
 }
 
-// 1. Fetch current form fields from Database
+// 1. Fetch current form questions from the New Architecture
 export async function getFormFields() {
   try {
-    const fields = await prisma.formField.findMany({
+    const fields = await prisma.formQuestion.findMany({
       orderBy: { orderIndex: 'asc' }
     });
     return { success: true, data: fields };
@@ -38,37 +37,64 @@ export async function getFormFields() {
 
 // 2. Save the entire form structure to Database
 export async function saveFormFields(fields: any[]) {
-  await requireAdmin();
+  await requireSupremeAdmin(); // 🟢 FIX: Maker-Checker Security Bypass - Only Admin can directly publish!
   
-  // --- STRICT VALIDATION: Maximum 4 fields can be highlighted ---
   const highlightedCount = fields.filter((f: any) => f.isHighlighted).length;
   if (highlightedCount > 4) {
     return { error: "Validation Error: You can pin a maximum of 4 fields to the dashboard." };
   }
   
   try {
-    // Transaction: Delete old form layout and insert the new fully updated layout
+    // 💡 FIX: For Multi-form setup, we need the exact Form ID from frontend payload, 
+    // but to preserve the existing signature temporarily, we'll fetch the targeted form 
+    // or rely on a wrapper function. Since this currently targets a generic active form:
+    let activeForm = await prisma.form.findFirst({
+      where: { isActive: true }
+    });
+
+    if (!activeForm) {
+      activeForm = await prisma.form.create({
+        data: {
+          title: "Master Form: Weekly Bulletin",
+          description: "Live application form",
+          isActive: true,
+          isMaster: true,
+          formMode: "QUEUE",
+          hasDeclaration: true,
+          declarationText: "I hereby declare that all information provided is accurate to the best of my knowledge."
+        }
+      });
+    } else if (!activeForm.isMaster) {
+      activeForm = await prisma.form.update({
+        where: { id: activeForm.id },
+        data: { isMaster: true }
+      });
+    }
+
+    // 🟢 FIX: Match Schema exactly
     await prisma.$transaction([
-      prisma.formField.deleteMany({}), // Clear old fields
-      prisma.formField.createMany({
+      prisma.formQuestion.deleteMany({ where: { formId: activeForm.id } }),
+      prisma.formQuestion.createMany({
         data: fields.map((f: any, index: number) => ({
+          formId: activeForm.id,
           fieldName: f.fieldName || `field_${Date.now()}_${index}`,
           fieldLabel: f.fieldLabel,
           fieldType: f.fieldType,
-          options: f.options,
+          options: f.options || [],
           isRequired: f.isRequired,
-          isActive: true,
-          isHighlighted: f.isHighlighted || false, // NAYA FIELD: Save the toggle state
-          orderIndex: index // Maintains the order you set in UI
+          isHighlighted: f.isHighlighted || false,
+          placeholder: f.placeholder || "",
+          maxLength: f.wordLimit ? Number(f.wordLimit) : null,
+          orderIndex: index
         }))
       })
     ]);
 
-    revalidatePath("/dashboard"); // Sahi dashboard path update karna
+    revalidatePath("/dashboard");
     revalidatePath("/admin");
     return { success: true, message: "Form successfully published! Highlights updated on Dashboard." };
   } catch (error) {
-    console.error(error);
+    console.error("Save Form Error:", error);
     return { error: "Failed to save form structure to database." };
   }
 }
@@ -96,7 +122,7 @@ export async function getPendingExecutives() {
 }
 
 export async function updateExecutiveApproval(userId: string, isApproved: boolean) {
-  await requireSupremeAdmin(); // SECURITY FIX: Sirf Supreme Admin approve karega!
+  await requireSupremeAdmin();
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return { error: "User not found." };
@@ -107,7 +133,6 @@ export async function updateExecutiveApproval(userId: string, isApproved: boolea
         data: { isApproved: true }
       });
 
-      // FIX: Using global transporter
       await transporter.sendMail({
         from: `"Club Admin" <${process.env.GMAIL_EMAIL}>`,
         to: user.email,

@@ -77,8 +77,13 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
   const processedApps = initialApplications.filter((app: any) => {
     const matchesStatus = filter === "ALL" ? true : app.status === filter;
     const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = app.user.name.toLowerCase().includes(searchLower) || 
-                          app.user.email.toLowerCase().includes(searchLower) ||
+    
+    // 🟢 FIX: Safe extraction to prevent undefined crash during search
+    const userName = app.user?.name || app.name || "";
+    const userEmail = app.user?.email || app.email || "";
+
+    const matchesSearch = userName.toLowerCase().includes(searchLower) || 
+                          userEmail.toLowerCase().includes(searchLower) ||
                           (app.dynamicData && app.dynamicData.toLowerCase().includes(searchLower));
     return matchesStatus && matchesSearch;
   }).sort((a: any, b: any) => {
@@ -166,8 +171,8 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="text-[10px] font-black text-blue-600 uppercase">Allocation #{index + 1}</span>
-                      <h4 className="font-extrabold text-[#0F2547] text-sm">{trainee.user.name}</h4>
-                      <p className="text-[11px] text-slate-500">{trainee.course} • {trainee.semester}</p>
+                      <h4 className="font-extrabold text-[#0F2547] text-sm">{trainee.user?.name || trainee.name || "Unknown"}</h4>
+                      <p className="text-[11px] text-slate-500">{trainee.user?.email || trainee.email}</p>
                     </div>
                     <button onClick={() => handleToggleSelect(trainee.id)} className="clay-btn px-2.5 py-1 text-[11px] text-red-600 flex items-center gap-1 hover:bg-red-50" title="Revoke Allocation">
                       <UserMinus className="w-3 h-3" /><span>Revoke</span>
@@ -263,7 +268,7 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
                       <div className="space-y-2 max-w-2xl min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs font-black text-slate-300 w-5">{index + 1}.</span>
-                          <h4 className="font-extrabold text-[#0F2547] text-sm break-words">{app.user.name}</h4>
+                          <h4 className="font-extrabold text-[#0F2547] text-sm break-words">{app.user?.name || app.name || "Unknown User"}</h4>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
                             app.status === "WAITING" ? "bg-amber-100 text-amber-800" :
                             app.status === "SHORTLISTED" ? "bg-blue-100 text-blue-800" :
@@ -291,7 +296,7 @@ export default function WorkflowTab({ initialSlot, initialApplications, onNaviga
                             );
                           })()}
                         </div>
-                        <p className="text-[11px] text-slate-400 mt-1.5 sm:ml-7 break-all sm:break-normal">Email: {app.user.email} • Registered: {new Date(app.appliedAt).toLocaleDateString()}</p>
+                        <p className="text-[11px] text-slate-400 mt-1.5 sm:ml-7 break-all sm:break-normal">Email: {app.user?.email || app.email || "No Email"} • Registered: {app.date || new Date(app.appliedAt || Date.now()).toLocaleDateString()}</p>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-start lg:justify-end border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-200/60 shrink-0">

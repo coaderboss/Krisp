@@ -103,29 +103,41 @@ export async function runAutoQueue(slotId: string) {
 export async function toggleStudentSelection(applicationId: string, slotId: string) {
   await requireAdmin();
 
-  const app = await prisma.application.findUnique({ where: { id: applicationId } });
-  if (!app) return { error: "Application record could not be found." };
+  try {
+    const [app, slot] = await Promise.all([
+      prisma.application.findUnique({ where: { id: applicationId } }),
+      prisma.weeklySlot.findUnique({ where: { id: slotId } })
+    ]);
 
-  if (app.weeklySlotId === slotId) {
-    await prisma.application.update({
-      where: { id: applicationId },
-      data: { weeklySlotId: null, status: "WAITING" },
-    });
-  } else {
-    const count = await prisma.application.count({ where: { weeklySlotId: slotId } });
-    if (count >= 2) {
-      return { error: "A maximum of 2 students can be assigned to a single weekly slot." };
+    if (!app) return { error: "Application record could not be found." };
+    if (!slot) return { error: "Active weekly slot could not be found." };
+
+    if (app.weeklySlotId === slotId) {
+      await prisma.application.update({
+        where: { id: applicationId },
+        data: { weeklySlotId: null, status: "WAITING" },
+      });
+      revalidatePath("/admin");
+      revalidatePath("/executive/dashboard");
+      return { success: true, message: "Slot allocation revoked." };
+    } else {
+      const count = await prisma.application.count({ where: { weeklySlotId: slotId } });
+      if (count >= 2) {
+        return { error: "This slot is already full (Maximum 2 presenters allowed)." };
+      }
+
+      await prisma.application.update({
+        where: { id: applicationId },
+        data: { weeklySlotId: slotId, status: "SHORTLISTED" },
+      });
+      revalidatePath("/admin");
+      revalidatePath("/executive/dashboard");
+      return { success: true, message: "Candidate successfully assigned to slot." };
     }
-
-    await prisma.application.update({
-      where: { id: applicationId },
-      data: { weeklySlotId: slotId, status: "SHORTLISTED" },
-    });
+  } catch (error) {
+    console.error("Toggle Selection Error:", error);
+    return { error: "Database error occurred during slot assignment." };
   }
-
-  revalidatePath("/admin");
-  revalidatePath("/");
-  return { success: true };
 }
 
 // 4. Update Status
@@ -268,7 +280,7 @@ export async function sendDirectEmail(email: string, subject: string, htmlBody: 
   }
 }
 
-// 10. Fetch Applications (TYPESCRIPT CRASH FIXED & HIGHLIGHTS ADDED)
+// 10. Fetch ALL Applications & Form Responses (Unified Data Vault Engine)
 export async function fetchAllApplications() {
   await requireAdmin();
   try {
@@ -277,15 +289,41 @@ export async function fetchAllApplications() {
       orderBy: { appliedAt: "desc" }
     });
 
-    // Data will flow entirely from dynamicData and highlightedData
-    const fixedApps = apps.map(app => ({
-      ...app,
-      dynamicData: app.dynamicData,
-      highlightedData: app.highlightedData // Dashboard par show hone wala fast data
-    }));
+    const responses = await prisma.formResponse.findMany({
+      include: { user: true, form: true },
+      orderBy: { submittedAt: "desc" }
+    });
 
-    return { success: true, data: fixedApps };
+    const unifiedData: any[] = [];
+
+    apps.forEach(app => {
+      unifiedData.push({
+        ...app, // Keeps id, status, appliedAt, weeklySlotId to prevent Executive Crash
+        formId: "master",
+        user: app.user, // 🟢 FIX: Restores nested user object!
+        topicInterested: app.topicInterested || "Not Selected",
+        dynamicData: app.dynamicData || "{}",
+        highlightedData: app.highlightedData,
+      });
+    });
+
+    responses.forEach(res => {
+      unifiedData.push({
+        id: res.id,
+        formId: res.formId,
+        user: res.user, // 🟢 FIX: Restores nested user object!
+        topicInterested: res.form.title, 
+        dynamicData: res.answersData || "{}",
+        highlightedData: null,
+        status: "RECORDED",
+        appliedAt: res.submittedAt, 
+        weeklySlotId: null, 
+      });
+    });
+
+    return { success: true, data: unifiedData };
   } catch (error) {
-    return { error: "Failed to fetch applications." };
+    console.error("Vault Fetch Error:", error);
+    return { error: "Failed to fetch applications from the data vault." };
   }
 }

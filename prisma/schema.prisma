@@ -25,39 +25,134 @@ model TwoFactorToken {
   @@unique([email, token])
 }
 
-// User model for both Students and Club Admins
+// User model for Students, Executives, and Club Admins
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  rollNumber    String?   // New field for Executive Registration
-  password      String?   // Hashed password
-  emailVerified DateTime?
-  role          Role      @default(STUDENT)
-  isApproved    Boolean   @default(true) // Executives will have this set to false initially
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  name              String
+  email             String    @unique
+  password          String?   // Hashed password
+  role              Role      @default(STUDENT)
+  isApproved        Boolean   @default(true) // Executives will have this set to false initially
+  image             String?
+  emailVerified     DateTime?
 
-  //FORGOT PASSWORD TOKENS
-  resetToken       String?   @unique
-  resetTokenExpiry DateTime?
+  // --- NAYA: EXTENDED PROFILE DATA ---
+  rollNumber        String?   
+  college           String?
+  department        String?
+  isProfileComplete Boolean   @default(false) // Triggers mandatory onboarding flow
 
-  // Student relation to their program applications
-  applications  Application[]
-  requests AdminRequest[]
+  // --- NAYA: EXECUTIVE GAMIFICATION & TRACKING ---
+  credits           Int       @default(0)     // +15 for approval, 0 for rejection
+  approvedRequests  Int       @default(0)
+  rejectedRequests  Int       @default(0)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // FORGOT PASSWORD TOKENS
+  resetToken        String?   @unique
+  resetTokenExpiry  DateTime?
+
+  // Relations
+  applications      Application[]
+  requests          AdminRequest[]
+  formResponses     FormResponse[]
 }
 
-// Presenter Program Enrollment Application
+// ==========================================
+// THE UNIVERSAL FORM ENGINE (SaaS Level)
+// ==========================================
+
+enum FormMode {
+  QUEUE
+  NORMAL
+  EVENT
+}
+
+model Form {
+  id              String         @id @default(cuid())
+  title           String
+  description     String?        @db.Text
+  isMaster        Boolean        @default(false) // True ONLY for the main Bulletin Form
+  isActive        Boolean        @default(true)  // Open/Close form toggle
+  
+  // --- NEW: FORM MODES & DECLARATION ---
+  execVaultAccess Boolean        @default(true)
+  formMode        FormMode       @default(NORMAL)
+  hasDeclaration  Boolean        @default(false)
+  declarationText String?        @db.Text
+  
+  questions       FormQuestion[]
+  responses       FormResponse[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model FormQuestion {
+  id            String    @id @default(cuid())
+  formId        String
+  form          Form      @relation(fields: [formId], references: [id], onDelete: Cascade)
+  
+  fieldName     String    // System ID (e.g., "github_link")
+  fieldLabel    String    // Display Name
+  fieldType     FieldType
+  options       String[]  // Array for Dropdowns/Checkboxes
+  
+  isRequired    Boolean   @default(true)
+  isHighlighted Boolean   @default(false) // Pin to dashboard cards
+  orderIndex    Int       @default(0)
+  
+  // --- NAYA: GRANULAR INPUT CONTROLS ---
+  placeholder   String?   // Helper text inside the input
+  minLength     Int?      // Text validation
+  maxLength     Int?      // Text validation
+  regex         String?   // Advanced string validation
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// General responses for any club event or form
+model FormResponse {
+  id          String   @id @default(cuid())
+  formId      String
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  answersData String   @db.Text // Stored as strict JSON
+  submittedAt DateTime @default(now())
+
+  @@unique([formId, userId]) // Limits to 1 submission per form per user
+}
+
+enum FieldType {
+  TEXT
+  LONG_TEXT
+  NUMBER
+  DROPDOWN
+  FILE_UPLOAD
+  CHECKBOX
+}
+
+// ==========================================
+// WEEKLY BULLETIN SPECIFIC PIPELINE
+// ==========================================
+
+// Master Bulletin Enrollment (Maintains slot and status logic)
 model Application {
   id              String         @id @default(cuid())
   userId          String         @unique
   user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course          String?        // Wapas add kiya (UI ke liye)
-  semester        String?        // Wapas add kiya (UI ke liye)
+  
+  course          String?        
+  semester        String?        
   topicInterested String         @default("Dynamic Topic") 
-  dynamicData     String?        // Saara data isme jayega
-  highlightedData String?
+  dynamicData     String?        @db.Text // Serialized JSON 
+  highlightedData String?        @db.Text
+  
   status          AppStatus      @default(WAITING)
   appliedAt       DateTime       @default(now())
   hasNudged       Boolean        @default(false)
@@ -67,16 +162,35 @@ model Application {
   weeklySlotId    String?
 }
 
-// Weekly Bulletin Slot (Manages the 2 students per week logic)
+// Weekly Slot Management
 model WeeklySlot {
-  id             String        @id @default(cuid())
-  weekStartDate  DateTime
-  weekEndDate    DateTime
-  theme          String?       // E.g., "Network Security Week"
-  isPublished    Boolean       @default(false)
+  id               String        @id @default(cuid())
+  weekStartDate    DateTime
+  weekEndDate      DateTime
+  theme            String?       
+  isPublished      Boolean       @default(false)
   
-  // The 2 students selected for this week
   selectedTrainees Application[]
+}
+
+// ==========================================
+// SYSTEM AUDIT & SETTINGS
+// ==========================================
+
+model AdminRequest {
+  id          String    @id @default(cuid())
+  executiveId String
+  executive   User      @relation(fields: [executiveId], references: [id], onDelete: Cascade)
+  actionType  String    
+  payload     String    @db.Text // JSON configuration
+  status      ReqStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+}
+
+model ClubSettings {
+  id           String   @id @default("global")
+  mailTemplate String   @default("Hello {{name}},\n\nYour presentation is scheduled.")
+  updatedAt    DateTime @updatedAt
 }
 
 enum Role {
@@ -86,57 +200,15 @@ enum Role {
 }
 
 enum AppStatus {
-  WAITING        // In the queue
-  SHORTLISTED    // Selected by Auto-Queue or Manual PnC
-  SCREENING_DONE // Passed the communication test
-  COMPLETED      // Video featured
+  WAITING        
+  SHORTLISTED    
+  SCREENING_DONE 
+  COMPLETED      
   REJECTED
-}
-
-// --- DYNAMIC FORM BUILDER MODELS ---
-
-model FormField {
-  id          String    @id @default(cuid())
-  fieldName   String    // System name (e.g., "github_link", "semester")
-  fieldLabel  String    // Display name (e.g., "GitHub Profile Link", "Select Semester")
-  fieldType   FieldType // TEXT, DROPDOWN, FILE_UPLOAD
-  options     String[]  // Dropdown options (e.g., ["1st Sem", "2nd Sem", "3rd Sem"]) - Empty if TEXT/FILE
-  isRequired  Boolean   @default(true)
-  isActive    Boolean   @default(true) // Admin can hide a field without deleting it
-  isHighlighted Boolean   @default(false)
-  orderIndex  Int       @default(0)    // To sort fields up and down in the form
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-enum FieldType {
-  TEXT
-  DROPDOWN
-  FILE_UPLOAD
-  CHECKBOX
-}
-
-// --- EXECUTIVE ACTION REQUESTS ---
-model AdminRequest {
-  id          String   @id @default(cuid())
-  executiveId String
-  executive   User     @relation(fields: [executiveId], references: [id], onDelete: Cascade)
-  actionType  String   // e.g., "UPDATE_MAIL_TEMPLATE", "PUBLISH_SLOT"
-  payload     String   // The new content they want to save (Store as JSON string)
-  status      ReqStatus @default(PENDING)
-  createdAt   DateTime @default(now())
 }
 
 enum ReqStatus {
   PENDING
   APPROVED
   REJECTED
-}
-
-// --- GLOBAL SETTINGS (Mail Templates, etc.) ---
-model ClubSettings {
-  id           String   @id @default("global")
-  mailTemplate String   @default("Hello {{name}},\n\nYour presentation is scheduled.")
-  updatedAt    DateTime @updatedAt
 }

@@ -9,10 +9,18 @@ declare module "next-auth" {
     user: {
       id: string;
       role: string;
+      isProfileComplete: boolean;
+      rollNumber?: string | null;
+      college?: string | null;
+      department?: string | null;
     } & DefaultSession["user"];
   }
   interface User {
     role?: string;
+    isProfileComplete?: boolean;
+    rollNumber?: string | null;
+    college?: string | null;
+    department?: string | null;
   }
 }
 
@@ -20,6 +28,10 @@ declare module "@auth/core/jwt" {
   interface JWT {
     id?: string;
     role?: string;
+    isProfileComplete?: boolean;
+    rollNumber?: string | null;
+    college?: string | null;
+    department?: string | null;
   }
 }
 // -------------------------------------------------------------------------
@@ -59,6 +71,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 role: "CLUB_ADMIN",
                 emailVerified: new Date(),
                 isApproved: true,
+                isProfileComplete: true, // Supreme Admin doesn't need onboarding
               }
             });
           }
@@ -68,6 +81,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             name: superAdmin.name,
             email: superAdmin.email,
             role: superAdmin.role,
+            isProfileComplete: superAdmin.isProfileComplete,
+            rollNumber: superAdmin.rollNumber,
+            college: superAdmin.college,
+            department: superAdmin.department,
           };
         }
 
@@ -96,6 +113,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             name: user.name,
             email: user.email,
             role: user.role,
+            isProfileComplete: user.isProfileComplete,
+            rollNumber: user.rollNumber,
+            college: user.college,
+            department: user.department,
           };
         }
 
@@ -107,14 +128,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role; 
+        token.role = user.role;
+        token.isProfileComplete = user.isProfileComplete;
+        token.rollNumber = user.rollNumber;
+        token.college = user.college;
+        token.department = user.department;
       }
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as string; 
+        session.user.role = token.role as string;
+        session.user.isProfileComplete = token.isProfileComplete as boolean;
+        session.user.rollNumber = token.rollNumber as string | null;
+        session.user.college = token.college as string | null;
+        session.user.department = token.department as string | null;
       }
       return session;
     }

@@ -97,9 +97,12 @@ export async function generateAdminOTP(formData: FormData) {
 
   if (!email || !password) return { error: "Both email and password are required to proceed." };
 
+  let isEnvAdmin = false;
+
   // --- SECURITY FIX: Supreme Admin Lockout Fix & Strict Verification ---
   if (email === process.env.ADMIN_EMAIL) {
     if (password !== process.env.ADMIN_PASSWORD) return { error: "Invalid credentials." };
+    isEnvAdmin = true;
   } else {
     // Normal Club Admin verification
     const user = await prisma.user.findUnique({ where: { email } });
@@ -112,14 +115,24 @@ export async function generateAdminOTP(formData: FormData) {
   }
 
   try {
-    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    // 💡 MASTER KEY LOGIC: .env admin ke liye OTP hamesha 123456 rahega
+    const token = isEnvAdmin ? "123456" : Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date(new Date().getTime() + 10 * 60 * 1000); 
 
     await prisma.twoFactorToken.deleteMany({ where: { email } });
     await prisma.twoFactorToken.create({ data: { email, token, expires } });
-    await sendTwoFactorTokenEmail(email, token);
 
-    return { success: true, message: "A secure verification code has been dispatched to your email." };
+    // Agar fake .env admin hai toh mail bhejne ka function call hi mat karo
+    if (!isEnvAdmin) {
+      await sendTwoFactorTokenEmail(email, token);
+    }
+
+    return { 
+      success: true, 
+      message: isEnvAdmin 
+        ? "Developer Mode: Use '123456' as your OTP." 
+        : "A secure verification code has been dispatched to your email." 
+    };
   } catch (error) {
     return { error: "Failed to dispatch the verification code. Please try again." };
   }

@@ -67,21 +67,45 @@ export async function approveRequest(requestId: string) {
       // Server-Side Guard - Maximum 4 Highlights
       const highlightedCount = payload.fields.filter((f: any) => f.isHighlighted).length;
       if (highlightedCount > 4) {
-        return { error: "Validation Error: You can pin a maximum of 4 fields to the dashboard." };
+        return { error: "Validation Error: You can pin a maximum of 4 fields to the Vault." };
       }
 
-      // Transaction: Delete old form layout and insert the new fully updated layout
+      // 💡 Find active Form or Create it
+      let targetForm = await prisma.form.findFirst({ where: { isActive: true } });
+      
+      if (!targetForm) {
+        targetForm = await prisma.form.create({
+          data: {
+            title: payload.title || "Weekly Bulletin Registration",
+            description: payload.description || "Live application form",
+            isActive: true,
+            isMaster: true
+          }
+        });
+      } else if (payload.title || payload.description) {
+        targetForm = await prisma.form.update({
+          where: { id: targetForm.id },
+          data: {
+            title: payload.title || targetForm.title,
+            description: payload.description || targetForm.description
+          }
+        });
+      }
+
+      // 🟢 FIX: Map strictly to Prisma Schema (removed isActive, used maxLength, safe options)
       await prisma.$transaction([
-        prisma.formField.deleteMany({}),
-        prisma.formField.createMany({
+        prisma.formQuestion.deleteMany({ where: { formId: targetForm.id } }),
+        prisma.formQuestion.createMany({
           data: payload.fields.map((f: any, index: number) => ({
+            formId: targetForm.id,
             fieldName: f.fieldName || `field_${Date.now()}_${index}`,
             fieldLabel: f.fieldLabel,
             fieldType: f.fieldType,
-            options: f.options,
+            options: f.options || [], 
             isRequired: f.isRequired,
-            isActive: true,
             isHighlighted: f.isHighlighted || false,
+            placeholder: f.placeholder || "",
+            maxLength: f.wordLimit ? Number(f.wordLimit) : null,
             orderIndex: index
           }))
         })
@@ -92,7 +116,6 @@ export async function approveRequest(requestId: string) {
         data: { isPublished: true }
       });
     } else if (request.actionType === "UPDATE_MAIL_TEMPLATE") {
-      // 🟢 FIX: Store Global Mail Template persistently in the database
       await prisma.clubSettings.upsert({
         where: { id: "global" },
         update: { mailTemplate: payload.template },
@@ -100,32 +123,50 @@ export async function approveRequest(requestId: string) {
       });
     }
 
-    // 2. MARK AS APPROVED
-    await prisma.adminRequest.update({
-      where: { id: requestId },
-      data: { status: "APPROVED" }
-    });
+    // 2. MARK AS APPROVED & AWARD CREDITS TO EXECUTIVE (GAMIFICATION)
+    // 🟢 FIX: Match Schema Fields exactly (approvedRequests)
+    await prisma.$transaction([
+      prisma.adminRequest.update({
+        where: { id: requestId },
+        data: { status: "APPROVED" }
+      }),
+      prisma.user.update({
+        where: { id: request.executiveId },
+        data: { 
+          credits: { increment: 15 },
+          approvedRequests: { increment: 1 } 
+        }
+      })
+    ]);
 
-    // 🟢 FIX: Invalidate cache for the public home page and dashboard routes
     revalidatePath("/"); 
     revalidatePath("/admin");
     revalidatePath("/dashboard");
-    return { success: true, message: "Request approved and successfully applied to the system!" };
+    return { success: true, message: "Request approved! Form updated and 15 Credits awarded to Executive." };
   } catch (error) {
     console.error("Approval Execution Error:", error);
     return { error: "Failed to execute the approval process." };
   }
 }
 
-// --- REJECT REQUEST ---
+// --- REJECT REQUEST & UPDATE LEADERBOARD ---
 export async function rejectRequest(requestId: string) {
   await requireSupremeAdmin();
 
   try {
-    await prisma.adminRequest.update({
+    const request = await prisma.adminRequest.update({
       where: { id: requestId },
       data: { status: "REJECTED" }
     });
+
+    // 🟢 FIX: Match Schema Field (rejectedRequests)
+    if (request.executiveId) {
+      await prisma.user.update({
+        where: { id: request.executiveId },
+        data: { rejectedRequests: { increment: 1 } }
+      });
+    }
+
     revalidatePath("/admin");
     return { success: true, message: "Request has been rejected." };
   } catch (error) {

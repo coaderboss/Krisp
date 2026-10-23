@@ -2,7 +2,7 @@ import { auth, signOut } from "@/auth";
 import prisma from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { getOrCreateCurrentSlot } from "@/actions/admin";
+import { getOrCreateCurrentSlot, fetchAllApplications } from "@/actions/admin";
 import AdminDashboardClient from "./AdminDashboardClient";
 import { ShieldCheck, LogOut } from "lucide-react";
 import Link from "next/link";
@@ -55,19 +55,19 @@ export default async function AdminPage() {
     );
   }
 
-  // --- FIX: Form Fields (Live Data) fetch karke Client ko bhej rahe hain ---
-  const [slot, applications, currentFormFields] = await Promise.all([
+  // --- FIX: Form Fields & Unified Applications fetch karke Client ko bhej rahe hain ---
+  const [slot, appsRes, currentFormFields] = await Promise.all([
     getOrCreateCurrentSlot(),
-    prisma.application.findMany({
-      include: {
-        user: { select: { name: true, email: true } },
-      },
-      orderBy: { appliedAt: "asc" },
-    }),
-    prisma.formField.findMany({
+    fetchAllApplications(), // 🟢 FIX: Uses the unified engine instead of raw Prisma query
+    prisma.formQuestion.findMany({
       orderBy: { orderIndex: "asc" }
     })
   ]);
+
+  // 🟢 FIX: Extract safely and filter out purely recorded events (General forms)
+  const applications = (appsRes.success && appsRes.data) 
+    ? appsRes.data.filter((a: any) => a.weeklySlotId !== undefined && a.status !== "RECORDED") 
+    : [];
 
   return (
     <div className="space-y-6">
