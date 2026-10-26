@@ -130,7 +130,7 @@ export async function generateAdminOTP(formData: FormData) {
     return { 
       success: true, 
       message: isEnvAdmin 
-        ? "Developer Mode: Use '123456' as your OTP." 
+        ? "Enter your OTP." 
         : "A secure verification code has been dispatched to your email." 
     };
   } catch (error) {
