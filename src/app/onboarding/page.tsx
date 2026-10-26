@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { completeOnboarding } from "@/actions/profile";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react"; // 🟢 ADDED useSession
 import { ShieldCheck, Building2, GraduationCap, Hash, ArrowRight, Loader2, LogOut } from "lucide-react";
 
 export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: "error" | "success" } | null>(null);
+  const { update } = useSession(); // 🟢 TO UPDATE SESSION ON THE FLY
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,7 +29,14 @@ export default function OnboardingPage() {
       setLoading(false);
     } else {
       setMessage({ text: "Profile verified! Syncing your secure session...", type: "success" });
-      setTimeout(() => signOut({ callbackUrl: "/login" }), 2500);
+      
+      // 🟢 FLAWLESS FIX: Update NextAuth Session Cookie without logging out
+      await update({ isProfileComplete: true }); 
+
+      // Send to Dashboard smoothly
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 1500);
     }
   }
 
@@ -37,7 +45,7 @@ export default function OnboardingPage() {
       
       {/* Mobile Optimized Wrapper */}
       <div className="w-full max-w-md flex justify-end mb-4">
-        {/* GHOST COOKIE ESCAPE HATCH - Now responsive */}
+        {/* GHOST COOKIE ESCAPE HATCH */}
         <button 
           onClick={() => signOut({ callbackUrl: "/login" })} 
           className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2 text-[11px] sm:text-xs font-bold text-red-600 bg-white border border-red-100 rounded-xl hover:bg-red-50 transition-colors shadow-sm"

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { registerStudent, loginStudent, sendPasswordResetLink } from "@/actions/auth"; // Backend action hum next step me banayenge
+import { registerStudent, loginStudent, sendPasswordResetLink } from "@/actions/auth"; 
 import { Sparkles, ShieldCheck, User, Mail, Lock, ArrowRight, MailCheck, Loader2, KeyRound } from "lucide-react";
 
 export default function LoginPage() {
@@ -61,7 +61,13 @@ export default function LoginPage() {
     } else if (isLogin) {
       // 🟢 LOGIN LOGIC
       const res = await loginStudent(formData);
-      if (res?.error) setMessage({ text: res.error, type: "error" });
+      if (res?.error) {
+        setMessage({ text: res.error, type: "error" });
+      } else {
+        // 🟢 FIX: Trigger hard navigation to let middleware handle onboarding routing
+        window.location.href = "/dashboard";
+        return; // Prevent setLoading(false) to keep the button in loading state during redirect
+      }
     } else {
       // 🟢 REGISTRATION LOGIC
       if (strength < 2) {
@@ -77,11 +83,13 @@ export default function LoginPage() {
         setShowVerification(false);
         setMessage({ text: res.error, type: "error" });
       } else {
-        setTimeout(() => {
-          setShowVerification(false);
-          setIsLogin(true);
-          setMessage({ text: "Verification successful! You can login now.", type: "success" });
-        }, 3000); 
+        // 🟢 FIX: Removed fake 3-second timer and updated success message
+        setShowVerification(false);
+        setIsLogin(true);
+        setMessage({ 
+          text: "Registration initiated! A verification link has been sent to your email. Please click the link to verify your account.", 
+          type: "success" 
+        });
       }
     }
     setLoading(false);
@@ -96,9 +104,9 @@ export default function LoginPage() {
             <MailCheck className="w-10 h-10 text-blue-600" />
             <span className="absolute top-0 right-0 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center animate-ping"></span>
           </div>
-          <h2 className="text-2xl font-extrabold text-[#0F2547] mb-2">Verifying Email...</h2>
+          <h2 className="text-2xl font-extrabold text-[#0F2547] mb-2">Initiating Verification...</h2>
           <p className="text-sm text-slate-500 leading-relaxed mb-6">
-            We are verifying your credentials and college email to register you on the secure system. please wait a moment.
+            We are setting up your profile and dispatching a secure verification link to your email. Please wait a moment.
           </p>
           <div className="flex items-center justify-center gap-2 text-blue-600 font-bold text-sm">
             <Loader2 className="w-5 h-5 animate-spin" />

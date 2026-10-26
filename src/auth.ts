@@ -108,6 +108,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             throw new Error("UnverifiedEmail"); // Strictly block unverified logins
           }
 
+          // Guard 3: SECURITY FIX - Stop blacklisted/suspended accounts
+          if (user.isBlacklisted || user.accountStatus !== "ACTIVE") {
+            throw new Error("Account is suspended. Please contact the administrator.");
+          }
+
           return {
             id: user.id,
             name: user.name,
@@ -125,7 +130,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
@@ -134,6 +139,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.college = user.college;
         token.department = user.department;
       }
+      
+      // 🟢 FIX: Listen for client-side update() call to sync session
+      if (trigger === "update" && session) {
+        token.isProfileComplete = session.isProfileComplete ?? true;
+        if (session.college) token.college = session.college;
+        if (session.department) token.department = session.department;
+        if (session.rollNumber) token.rollNumber = session.rollNumber;
+      }
+
       return token;
     },
     async session({ session, token }) {

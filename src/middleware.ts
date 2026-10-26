@@ -4,7 +4,7 @@ import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
 import { getToken } from 'next-auth/jwt';
 
-// Redis Connection Setup (Fail-safe initialization)
+// 1. Redis Connection Setup (Fail-safe initialization)
 const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
 const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -21,6 +21,12 @@ if (redisUrl && redisToken) {
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
+  // EXCEPTION: Always allow Next.js internal static files, APIs, and images to pass immediately.
+  // This prevents the middleware from blocking background session updates.
+  if (path.startsWith('/_next') || path.startsWith('/static') || path.match(/\.(png|jpg|jpeg|gif|svg|ico|webp)$/)) {
+    return NextResponse.next();
+  }
+
   // --- 1. BASIC BOT & SCRIPT PROTECTION ---
   const userAgent = request.headers.get('user-agent') || '';
   if (!userAgent || userAgent.includes('curl') || userAgent.includes('PostmanRuntime')) {
@@ -31,32 +37,47 @@ export async function middleware(request: NextRequest) {
   }
 
   // --- 2. JWT EDGE DECODING (Bulletproof Token Check) ---
-  // Ye accurately token nikalega aur uske andar ka data padhega bina DB call ke.
   const token = await getToken({ 
     req: request, 
     secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET 
   });
   
   const isAuthenticated = Boolean(token);
-  // Agar isProfileComplete strictly true nahi hai, toh false manenge (safety default)
   const isProfileComplete = token?.isProfileComplete === true; 
+  const role = token?.role as string | undefined;
 
   const isAuthApi = path.startsWith('/api/auth');
   const isOnboarding = path === '/onboarding';
+  const isLoginPage = path === '/login' || path === '/admin/login' || path === '/executive/login';
 
-  // --- 3. MANDATORY ONBOARDING GATEKEEPER ---
-  // Agar logged in hai, par profile incomplete hai, toh ONLY /onboarding aur /api/auth allow karo.
-  if (isAuthenticated && !isProfileComplete && !isAuthApi && !isOnboarding) {
-    return NextResponse.redirect(new URL('/onboarding', request.url));
+  // --- 3. REDIRECT RULES LOGIC (Strict Sequence to Prevent Loops) ---
+
+  // RULE A: If trying to access Onboarding Page
+  if (isOnboarding) {
+    if (!isAuthenticated) return NextResponse.redirect(new URL('/login', request.url)); // Must login first
+    if (isProfileComplete) {
+      // Already complete? Send them to their respective dashboard
+      if (role === "CLUB_ADMIN") return NextResponse.redirect(new URL('/admin', request.url));
+      if (role === "EXECUTIVE") return NextResponse.redirect(new URL('/executive/dashboard', request.url));
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    // Allow access to onboarding if auth is true but profile is incomplete
   }
 
-  // Agar profile ALREADY complete hai aur wo /onboarding khol raha hai, toh use bhagao wahan se
-  if (isAuthenticated && isProfileComplete && isOnboarding) {
-    if (token?.role === "CLUB_ADMIN") return NextResponse.redirect(new URL('/admin', request.url));
-    if (token?.role === "EXECUTIVE") return NextResponse.redirect(new URL('/executive/dashboard', request.url));
+  // RULE B: If trying to access Login Pages while already authenticated
+  if (isLoginPage && isAuthenticated) {
+    if (!isProfileComplete) return NextResponse.redirect(new URL('/onboarding', request.url)); // Force finish onboarding
+    // Already complete? Send to dashboard
+    if (role === "CLUB_ADMIN") return NextResponse.redirect(new URL('/admin', request.url));
+    if (role === "EXECUTIVE") return NextResponse.redirect(new URL('/executive/dashboard', request.url));
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
+  // RULE C: Mandatory Gatekeeper for logged-in users navigating elsewhere
+  // If logged in, but profile is INCOMPLETE, block everything except onboarding & auth APIs
+  if (isAuthenticated && !isProfileComplete && !isAuthApi && !isOnboarding && !isLoginPage) {
+    return NextResponse.redirect(new URL('/onboarding', request.url));
+  }
 
   // --- 4. STRICT ROLE-BASED EDGE ROUTE GUARDS ---
 
@@ -70,41 +91,19 @@ export async function middleware(request: NextRequest) {
   }
 
   // B. Supreme Admin Console Protection (/admin)
-  if (path.startsWith('/admin') && path !== '/admin/login') {
-    if (!isAuthenticated) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
-    }
-    // LOOPHOLE CLOSED: Only CLUB_ADMIN can access this path
-    if (token?.role !== 'CLUB_ADMIN') {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
+  if (path.startsWith('/admin') && !isLoginPage) {
+    if (!isAuthenticated) return NextResponse.redirect(new URL('/admin/login', request.url));
+    if (role !== 'CLUB_ADMIN') return NextResponse.redirect(new URL('/login', request.url)); // Kicks out non-admins
   }
 
   // C. Executive Portal Protection (/executive)
-  if (path.startsWith('/executive') && path !== '/executive/login') {
-    if (!isAuthenticated) {
-      return NextResponse.redirect(new URL('/executive/login', request.url));
-    }
-    // LOOPHOLE CLOSED: Only EXECUTIVE or CLUB_ADMIN can access
-    if (token?.role !== 'EXECUTIVE' && token?.role !== 'CLUB_ADMIN') {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
+  if (path.startsWith('/executive') && !isLoginPage) {
+    if (!isAuthenticated) return NextResponse.redirect(new URL('/executive/login', request.url));
+    if (role !== 'EXECUTIVE' && role !== 'CLUB_ADMIN') return NextResponse.redirect(new URL('/login', request.url));
   }
-
-  // D. Logged-in users trying to access Login Pages -> Send them to their respective dashboards
-  if ((path === '/login' || path === '/admin/login' || path === '/executive/login') && isAuthenticated && isProfileComplete) {
-    if (token?.role === "CLUB_ADMIN") return NextResponse.redirect(new URL('/admin', request.url));
-    if (token?.role === "EXECUTIVE") return NextResponse.redirect(new URL('/executive/dashboard', request.url));
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
 
   // --- 5. REDIS RATE LIMITING (Sensitive Routes Only) ---
-  const isSensitiveRoute = 
-    path.startsWith('/admin/login') || 
-    path.startsWith('/executive/login') || 
-    path === '/login' ||
-    path.startsWith('/api/');
+  const isSensitiveRoute = isLoginPage || path.startsWith('/api/');
 
   if (isSensitiveRoute && ratelimit) {
     const ip = request.headers.get("x-forwarded-for")?.split(',')[0].trim() || 
@@ -131,7 +130,6 @@ export async function middleware(request: NextRequest) {
       console.error("Redis Rate Limit Failed (Fail-Open active):", error);
     }
   }
-
 
   // --- 6. ENTERPRISE SECURITY HEADERS ---
   const response = NextResponse.next();
