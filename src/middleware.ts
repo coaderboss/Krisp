@@ -36,11 +36,29 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  // --- 2. JWT EDGE DECODING (Bulletproof Token Check) ---
-  const token = await getToken({ 
-    req: request, 
-    secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET 
+  // --- 2. JWT EDGE DECODING (The Vercel HTTPS Cookie Fix) ---
+  // Vercel par HTTPS hone ki wajah se cookie secure hoti hai (__Secure- prefix).
+  // getToken ko explicitly batana padta hai ki secure cookie aur exact salt kya hai.
+  const isProduction = process.env.NODE_ENV === "production";
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+
+  // Primary Check (Auth.js v5 Format)
+  let token = await getToken({
+    req: request,
+    secret: secret,
+    secureCookie: isProduction,
+    salt: isProduction ? "__Secure-authjs.session-token" : "authjs.session-token"
   });
+
+  // Fallback Check (NextAuth v4 Format - Just in case Vercel Edge misinterprets versions)
+  if (!token) {
+    token = await getToken({
+      req: request,
+      secret: secret,
+      secureCookie: isProduction,
+      salt: isProduction ? "__Secure-next-auth.session-token" : "next-auth.session-token"
+    });
+  }
   
   const isAuthenticated = Boolean(token);
   const isProfileComplete = token?.isProfileComplete === true; 
