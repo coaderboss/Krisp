@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Video, Users, Send, Settings as SettingsIcon, Bell, CheckCircle, XCircle, Eye, Type, List, CheckSquare, Upload, ArrowRight } from "lucide-react";
+import { LayoutDashboard, Video, Users, Send, Settings as SettingsIcon, Bell, CheckCircle, XCircle, Eye, Type, List, CheckSquare, Upload, ArrowRight } from "lucide-react";
+import OverviewTab from "@/components/admin/OverviewTab";
 import WorkflowTab from "@/components/admin/WorkflowTab";
 import TeamTab from "@/components/admin/TeamTab";
 import CommunicationTab from "@/components/admin/CommunicationTab";
@@ -26,6 +27,8 @@ type Slot = {
   selectedTrainees: Trainee[];
 };
 
+import AttendancePortal from "@/components/admin/AttendancePortal"; // 🟢 ADDED IMPORT
+
 export default function AdminDashboardClient({ 
   initialSlot, 
   initialApplications,
@@ -35,7 +38,7 @@ export default function AdminDashboardClient({
   initialApplications: Trainee[];
   initialFormFields: any[];
 }) {
-  const [activeTab, setActiveTab] = useState<"WORKFLOW" | "TEAM" | "COMMUNICATION" | "SETTINGS" | "INBOX">("WORKFLOW");
+  const [activeTab, setActiveTab] = useState<"OVERVIEW" | "WORKFLOW" | "TEAM" | "COMMUNICATION" | "SETTINGS" | "INBOX" | "ATTENDANCE">("OVERVIEW");
   
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [loadingReqId, setLoadingReqId] = useState<string>("");
@@ -88,6 +91,9 @@ export default function AdminDashboardClient({
     <div className="space-y-6 pb-16">
       {/* Supreme Admin Navigation Tabs */}
       <div className="overflow-x-auto no-scrollbar scroll-smooth flex items-center gap-2 border-b border-slate-200 pb-2 flex-nowrap w-full">
+        <button onClick={() => setActiveTab("OVERVIEW")} className={`shrink-0 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all ${activeTab === "OVERVIEW" ? "bg-purple-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2"><LayoutDashboard className="w-4 h-4" /> Command Center</div>
+        </button>
         <button onClick={() => setActiveTab("WORKFLOW")} className={`shrink-0 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all ${activeTab === "WORKFLOW" ? "bg-blue-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
           <div className="flex items-center gap-1.5 sm:gap-2"><Video className="w-4 h-4" /> Presenter Workflow</div>
         </button>
@@ -109,6 +115,8 @@ export default function AdminDashboardClient({
         </button>
       </div>
 
+      {activeTab === "OVERVIEW" && <OverviewTab navigateTo={setActiveTab} />}
+      {activeTab === "ATTENDANCE" && <AttendancePortal onClose={() => setActiveTab("OVERVIEW")} />}
       {activeTab === "WORKFLOW" && <WorkflowTab initialSlot={initialSlot} initialApplications={initialApplications} onNavigateToComm={() => setActiveTab("COMMUNICATION")} />}
       {activeTab === "TEAM" && <TeamTab />}
       {activeTab === "COMMUNICATION" && <CommunicationTab slot={initialSlot} />}

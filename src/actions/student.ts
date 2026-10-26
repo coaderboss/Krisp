@@ -152,3 +152,14 @@ export async function submitStudentForm(formData: FormData) {
     return { error: "A database error occurred. Your submission failed." };
   }
 }
+
+export async function getStudentEvents() {
+  try {
+    const events = await prisma.clubEvent.findMany({
+      orderBy: { eventDate: "asc" }
+    });
+    return { success: true, data: events };
+  } catch (error) {
+    return { error: "Failed to fetch events." };
+  }
+}

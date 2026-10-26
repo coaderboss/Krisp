@@ -43,9 +43,13 @@ model User {
   isProfileComplete Boolean   @default(false) // Triggers mandatory onboarding flow
 
   // --- NAYA: EXECUTIVE GAMIFICATION & TRACKING ---
-  credits           Int       @default(0)     // +15 for approval, 0 for rejection
+  credits           Int       @default(0)       // +15 for approval, 0 for rejection
   approvedRequests  Int       @default(0)
   rejectedRequests  Int       @default(0)
+
+  // --- NAYA: ACCESS CONTROL & SECURITY ---
+  isBlacklisted     Boolean   @default(false)
+  accountStatus     String    @default("ACTIVE") // ACTIVE, SUSPENDED, DELETED
 
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -58,6 +62,7 @@ model User {
   applications      Application[]
   requests          AdminRequest[]
   formResponses     FormResponse[]
+  attendanceRecords AttendanceRecord[]
 }
 
 // ==========================================
@@ -80,6 +85,8 @@ model Form {
   // --- NEW: FORM MODES & DECLARATION ---
   execVaultAccess Boolean        @default(true)
   formMode        FormMode       @default(NORMAL)
+  
+  instructionText String?        @db.Text // Premium Instruction Page
   hasDeclaration  Boolean        @default(false)
   declarationText String?        @db.Text
   
@@ -107,7 +114,8 @@ model FormQuestion {
   // --- NAYA: GRANULAR INPUT CONTROLS ---
   placeholder   String?   // Helper text inside the input
   minLength     Int?      // Text validation
-  maxLength     Int?      // Text validation
+  maxLength     Int?      // Number/Text validation (Word limit or Max Value)
+  isMultiSelect Boolean   @default(false) // Single vs Multi Checkbox/Dropdown
   regex         String?   // Advanced string validation
   
   createdAt     DateTime  @default(now())
@@ -190,6 +198,18 @@ model AdminRequest {
 model ClubSettings {
   id           String   @id @default("global")
   mailTemplate String   @default("Hello {{name}},\n\nYour presentation is scheduled.")
+  
+  // --- DYNAMIC MEDIA ENGINE (HOME PAGE) ---
+  mediaTitle   String   @default("Featured Cyber Bulletin Episode")
+  mediaLimit   Int      @default(1)
+  mediaUrls    String   @default("[]") // JSON Array of URLs
+  
+  // --- SMTP SERVER CONFIGURATION ---
+  smtpEmail    String?
+  smtpPassword String?
+  smtpHost     String?  @default("smtp.gmail.com")
+  smtpPort     Int?     @default(465)
+  
   updatedAt    DateTime @updatedAt
 }
 
@@ -211,4 +231,74 @@ enum ReqStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// ==========================================
+// CALENDAR & EVENT MANAGEMENT
+// ==========================================
+
+model ClubEvent {
+  id          String    @id @default(cuid())
+  title       String
+  description String?   @db.Text
+  eventType   String    @default("WORKSHOP") // WORKSHOP, MEETING, SHOOT, DEADLINE
+  eventDate   DateTime  
+  
+  // Link to Attendance Session if this event requires check-in
+  attendanceSession AttendanceSession?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+
+
+
+enum AttendanceType {
+  MANUAL
+  TIMER
+}
+
+enum AttendanceMode {
+  QR
+  CODE
+}
+
+model AttendanceSession {
+  id          String         @id @default(cuid())
+  title       String
+  date        DateTime
+  type        AttendanceType @default(MANUAL)
+  mode        AttendanceMode @default(CODE)
+  
+  deadline    DateTime?      // If type is TIMER
+  
+  secretCode  String?        @unique // For CODE mode
+  qrPayload   String?        @unique // For QR mode (Secure hash)
+  
+  isActive    Boolean        @default(true)
+  
+  // 🟢 FIX: Added the missing opposite relation fields linking back to ClubEvent
+  eventId     String?        @unique
+  event       ClubEvent?     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  records     AttendanceRecord[]
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model AttendanceRecord {
+  id          String   @id @default(cuid())
+  
+  sessionId   String
+  session     AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  markedAt    DateTime @default(now())
+
+  // SECURITY: Ek session mein ek user sirf ek baar entry le sakta hai
+  @@unique([sessionId, userId])
 }

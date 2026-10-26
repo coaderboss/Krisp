@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getOrCreateCurrentSlot, runAutoQueue, toggleStudentSelection, updateApplicationStatus, fetchAllApplications } from "@/actions/admin";
+import { getOrCreateCurrentSlot, runAutoQueue, toggleStudentSelection, updateApplicationStatus, fetchAllApplications, getGlobalMedia, updateGlobalMedia } from "@/actions/admin";
 import { submitReviewRequest } from "@/actions/requests";
-import { Video, Video as VideoIcon, RotateCcw, Send, Settings, Zap, ShieldAlert, CheckCircle, Clock, UserPlus, UserMinus, Search, Layers, ChevronDown } from "lucide-react";
+import { Video, Video as VideoIcon, RotateCcw, Send, Settings, Zap, ShieldAlert, CheckCircle,
+   Clock, UserPlus, UserMinus, Search, Layers, ChevronDown, Link as LinkIcon, MonitorPlay, Camera, Plus, Trash2, XCircle, PlaySquare, LayoutTemplate, Save } from "lucide-react";
 import SettingsTab from "@/components/admin/SettingsTab"; // 🟢 IMPORTED CLEAN COMPONENT
 
 export default function ExecutiveDashboard() {
@@ -28,6 +29,14 @@ export default function ExecutiveDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [groupField, setGroupField] = useState<string | null>(null);
 
+  // --- DYNAMIC MEDIA ENGINE (SPA STATES) ---
+  const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [mediaTitle, setMediaTitle] = useState("Featured Cyber Bulletin Episode");
+  const [mediaLimit, setMediaLimit] = useState(1);
+  const [mediaUrls, setMediaUrls] = useState<any[]>([]);
+  const [tempNewUrl, setTempNewUrl] = useState("");
+
   const selectedStudents = slot?.selectedTrainees || [];
 
   function notify(text: string, type: "success" | "error" = "success") {
@@ -51,7 +60,6 @@ export default function ExecutiveDashboard() {
               email: app.user?.email || app.email || "No Email",
               topicInterested: app.topicInterested || app.topic || "Not Selected",
               status: app.status || "WAITING",
-              // 🟢 FIX 2: Valid Date Fallback to prevent NaN sort crashing the list
               appliedAt: app.appliedAt || app.date || new Date().toISOString(),
               weeklySlotId: app.weeklySlotId || null,
               user: app.user || { name: app.name || "Unknown User", email: app.email || "No Email" },
@@ -60,7 +68,6 @@ export default function ExecutiveDashboard() {
           }));
           setApplications(realData);
           
-          // 🔴 BADGE LOGIC: Calculate waiting applications for Workflow tab
           const waitingApps = realData.filter((a: any) => a.status === "WAITING").length;
           setPendingWorkflowCount(waitingApps);
         }
@@ -68,6 +75,12 @@ export default function ExecutiveDashboard() {
         const savedTemplate = localStorage.getItem("savedScreeningTemplate");
         if (savedTemplate) setScreeningTemplate(savedTemplate);
 
+        const mediaRes = await getGlobalMedia();
+        if (mediaRes.success && mediaRes.data) {
+          setMediaTitle(mediaRes.data.title);
+          setMediaLimit(mediaRes.data.limit);
+          try { setMediaUrls(JSON.parse(mediaRes.data.urls)); } catch(e){}
+        }
       } catch (error) {
         notify("Failed to load dashboard data", "error");
       }
@@ -75,6 +88,25 @@ export default function ExecutiveDashboard() {
     }
     loadData();
   }, []);
+
+  async function handlePublishMedia() {
+    setLoading("publish-media");
+    const res = await updateGlobalMedia(mediaTitle, mediaLimit, JSON.stringify(mediaUrls));
+    if (res.success) {
+      notify(res.message);
+      setIsMediaManagerOpen(false);
+    } else notify(res.error || "Failed", "error");
+    setLoading("");
+  }
+
+  function addMediaUrl() {
+    if (!tempNewUrl) return;
+    let type = "link";
+    if (tempNewUrl.includes("youtube.com") || tempNewUrl.includes("youtu.be")) type = "youtube";
+    else if (tempNewUrl.includes("instagram.com")) type = "instagram";
+    setMediaUrls([...mediaUrls, { type, url: tempNewUrl }]);
+    setTempNewUrl("");
+  }
 
   const availableGroupFields = Array.from(new Set(
     applications.flatMap((app: any) => {
@@ -88,7 +120,6 @@ export default function ExecutiveDashboard() {
   const processedApps = applications.filter((app: any) => {
     const matchesStatus = filter === "ALL" ? true : app.status === filter;
     const searchLower = searchTerm.toLowerCase();
-    // 🟢 FIX: Added safe optional chaining for user objects to prevent crash
     const userName = app.user?.name || app.name || "";
     const userEmail = app.user?.email || app.email || "";
     
@@ -176,7 +207,6 @@ export default function ExecutiveDashboard() {
         </div>
 
         <div className="overflow-x-auto no-scrollbar scroll-smooth flex items-center gap-2 flex-nowrap pb-1 w-full">
-          {/* WORKFLOW TAB */}
           <button onClick={() => setActiveTab("WORKFLOW")} className={`relative shrink-0 px-3.5 sm:px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all ${activeTab === "WORKFLOW" ? "bg-blue-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
             <div className="flex items-center gap-2"><Video className="w-4 h-4" /> Presenter Workflow</div>
             {pendingWorkflowCount > 0 && (
@@ -186,12 +216,10 @@ export default function ExecutiveDashboard() {
             )}
           </button>
           
-          {/* COMMUNICATION TAB */}
           <button onClick={() => setActiveTab("COMMUNICATION")} className={`shrink-0 px-3.5 sm:px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all ${activeTab === "COMMUNICATION" ? "bg-blue-600 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
             <div className="flex items-center gap-2"><Send className="w-4 h-4" /> Communication</div>
           </button>
 
-          {/* SETTINGS TAB */}
           <button onClick={() => setActiveTab("SETTINGS")} className={`shrink-0 px-3.5 sm:px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider rounded-xl transition-all ${activeTab === "SETTINGS" ? "bg-slate-800 text-white shadow-md" : "text-slate-500 hover:bg-slate-100"}`}>
             <div className="flex items-center gap-2"><Settings className="w-4 h-4" /> Form Settings</div>
           </button>
@@ -201,6 +229,37 @@ export default function ExecutiveDashboard() {
       {/* ================= TAB 1: WORKFLOW ================= */}
       {activeTab === "WORKFLOW" && (
         <div className="space-y-6 sm:space-y-8">
+          
+          {/* 🎬 DYNAMIC MEDIA ENGINE (SPA HUB) */}
+          <section className="clay-card p-4 sm:p-6 md:p-8 space-y-6 bg-gradient-to-br from-white to-slate-50 border-2 border-slate-100 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/30 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
+            <div className="flex flex-col md:flex-row justify-between md:items-center border-b border-slate-200/80 pb-5 gap-4 relative z-10">
+               <div>
+                  <span className="clay-badge-blue px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest mb-2 inline-block">Global Module</span>
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547] flex items-center gap-2">
+                    <MonitorPlay className="w-6 h-6 text-red-500"/> Media Broadcasting Hub
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">Manage multiple URLs, control home page display limits, and preview live design.</p>
+               </div>
+               <div className="flex flex-wrap gap-3">
+                  <button onClick={() => setIsPreviewOpen(true)} className="clay-btn px-4 py-2.5 text-xs font-bold text-slate-700 flex items-center gap-2 bg-white hover:bg-slate-50 border-2 border-slate-200">
+                    <LayoutTemplate className="w-4 h-4 text-blue-500"/> Preview Design
+                  </button>
+                  <button onClick={() => setIsMediaManagerOpen(true)} className="clay-btn-primary px-5 py-2.5 text-xs font-extrabold flex items-center gap-2 shadow-lg hover:shadow-xl uppercase tracking-wider">
+                    <Settings className="w-4 h-4"/> Full Control
+                  </button>
+               </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 relative z-10">
+               <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 shadow-sm flex items-center gap-2">
+                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Active Links: <span className="text-blue-600">{mediaUrls.length}</span>
+               </div>
+               <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 shadow-sm flex items-center gap-2">
+                 <Layers className="w-4 h-4 text-amber-500" /> Display Limit: <span className="text-amber-600">{mediaLimit} Max</span>
+               </div>
+            </div>
+          </section>
+
           <section className="clay-card p-4 sm:p-6 md:p-8 space-y-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
               <div className="space-y-1 min-w-0">
@@ -397,6 +456,121 @@ export default function ExecutiveDashboard() {
               </div>
             )}
           </section>
+
+          {/* ===================================== */}
+          {/* SPA MODAL 1: FULL MEDIA CONTROL       */}
+          {/* ===================================== */}
+          {isMediaManagerOpen && (
+            <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in zoom-in-95">
+              <div className="bg-white rounded-[32px] w-full max-w-3xl clay-card shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-slate-200">
+                <div className="bg-slate-50 p-6 border-b border-slate-200 flex justify-between items-center z-10 shrink-0">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-[#0F2547] flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-blue-600"/> Media Engine Configuration
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1">Add links and specify how many will render on the portal.</p>
+                  </div>
+                  <button onClick={() => setIsMediaManagerOpen(false)} className="w-8 h-8 rounded-full bg-white border border-slate-200 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors"><XCircle className="w-5 h-5"/></button>
+                </div>
+                
+                <div className="p-6 overflow-y-auto space-y-6 bg-white flex-1 custom-scrollbar">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Section Title on Home Page</label>
+                      <input type="text" value={mediaTitle} onChange={e => setMediaTitle(e.target.value)} className="clay-input w-full px-4 py-3 text-sm font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Max Videos to Display</label>
+                      <select value={mediaLimit} onChange={e => setMediaLimit(Number(e.target.value))} className="clay-input w-full px-4 py-3 text-sm font-bold bg-white cursor-pointer">
+                        <option value={1}>Show 1 Video (Single Feature)</option>
+                        <option value={2}>Show 2 Videos (Grid format)</option>
+                        <option value={3}>Show 3 Videos (Grid format)</option>
+                        <option value={4}>Show 4 Videos (Grid format)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="clay-inset p-5 rounded-2xl bg-blue-50/50 border border-blue-100">
+                    <label className="block text-xs font-bold text-slate-700 mb-2">Add New Media URL</label>
+                    <div className="flex gap-2">
+                      <input type="url" value={tempNewUrl} onChange={e => setTempNewUrl(e.target.value)} placeholder="Paste Instagram Reel or YouTube link..." className="clay-input w-full px-4 py-3 text-sm font-medium" />
+                      <button onClick={addMediaUrl} className="clay-btn-primary px-5 py-3 text-xs font-bold shrink-0 flex items-center gap-1"><Plus className="w-4 h-4"/> Add Link</button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Current Database ({mediaUrls.length})</p>
+                    {mediaUrls.length > 0 ? mediaUrls.map((m, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 group hover:border-blue-300 transition-colors">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 flex items-center justify-center shrink-0">
+                             {m.type === "youtube" ? <MonitorPlay className="w-4 h-4 text-red-500"/> : m.type === "instagram" ? <Camera className="w-4 h-4 text-pink-500"/> : <LinkIcon className="w-4 h-4 text-blue-500"/>}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-700 truncate">{m.url}</p>
+                            <p className="text-[10px] text-slate-400 uppercase">{m.type}</p>
+                          </div>
+                        </div>
+                        <button onClick={() => setMediaUrls(mediaUrls.filter((_, i) => i !== idx))} className="text-slate-400 hover:text-red-500 p-2"><Trash2 className="w-4 h-4"/></button>
+                      </div>
+                    )) : <div className="text-center py-6 text-slate-400 text-xs font-bold border-2 border-dashed border-slate-200 rounded-xl">No media links added yet.</div>}
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-5 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+                  <button onClick={() => setIsMediaManagerOpen(false)} className="clay-btn px-6 py-3 text-xs font-bold text-slate-600 hover:bg-slate-100">Cancel</button>
+                  <button onClick={handlePublishMedia} disabled={loading === "publish-media"} className="clay-btn-primary px-8 py-3 text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 shadow-lg">
+                    <Save className="w-4 h-4"/> {loading === "publish-media" ? "Publishing..." : "Save & Publish Global Settings"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===================================== */}
+          {/* SPA MODAL 2: LIVE HOMEPAGE PREVIEW    */}
+          {/* ===================================== */}
+          {isPreviewOpen && (
+            <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-in fade-in zoom-in-95">
+              <div className="bg-slate-100 rounded-[40px] w-full max-w-5xl h-full max-h-[90vh] flex flex-col overflow-hidden border-[8px] border-slate-800 shadow-2xl relative">
+                 <div className="absolute top-0 inset-x-0 h-6 flex justify-center z-50 pointer-events-none">
+                    <div className="w-32 h-5 bg-slate-800 rounded-b-xl"></div>
+                 </div>
+                 
+                 <div className="bg-white border-b border-slate-200 p-4 pt-8 flex justify-between items-center z-40 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-red-500"></span><span className="w-3 h-3 rounded-full bg-amber-500"></span><span className="w-3 h-3 rounded-full bg-emerald-500"></span>
+                      <span className="ml-2 text-xs font-black text-slate-400 tracking-wider">PORTAL PREVIEW</span>
+                    </div>
+                    <button onClick={() => setIsPreviewOpen(false)} className="px-4 py-1.5 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-700">Close Preview</button>
+                 </div>
+
+                 <div className="flex-1 overflow-y-auto p-6 sm:p-10 bg-slate-50 custom-scrollbar">
+                    {/* Mocking the actual Homepage Section Design */}
+                    <div className="max-w-4xl mx-auto space-y-8">
+                       <div className="text-center space-y-3">
+                         <span className="text-xs font-black text-red-600 uppercase tracking-widest bg-red-50 px-3 py-1.5 rounded-full border border-red-100"><MonitorPlay className="w-4 h-4 inline mr-1"/> Club Broadcast</span>
+                         <h2 className="text-3xl font-black text-[#0F2547] tracking-tight">{mediaTitle}</h2>
+                       </div>
+
+                       {mediaUrls.length > 0 ? (
+                         <div className={`grid gap-6 ${mediaLimit === 1 ? 'grid-cols-1 max-w-2xl mx-auto' : mediaLimit === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'}`}>
+                           {mediaUrls.slice(0, mediaLimit).map((m, idx) => (
+                             <div key={idx} className="aspect-video bg-slate-900 rounded-[24px] border-4 border-white shadow-xl relative overflow-hidden flex items-center justify-center group">
+                               <div className="absolute inset-0 bg-[radial-gradient(#1e3a8a_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
+                               <PlaySquare className="w-12 h-12 text-white/80 group-hover:scale-110 transition-transform relative z-10" />
+                               <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur px-2 py-1 rounded text-[9px] text-white font-bold">{m.type.toUpperCase()}</div>
+                             </div>
+                           ))}
+                         </div>
+                       ) : (
+                         <div className="p-10 text-center bg-white border-2 border-dashed border-slate-200 rounded-3xl text-slate-400 font-bold">No media configured to display.</div>
+                       )}
+                    </div>
+                 </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

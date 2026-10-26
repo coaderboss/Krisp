@@ -121,6 +121,7 @@ Cybersecurity Club • UIET CSJM University`;
           <button onClick={() => setCommSubTab("SCREENING")} className={`flex-1 md:flex-none px-3.5 sm:px-4 py-2 text-xs font-bold rounded-lg transition-all text-center whitespace-nowrap shrink-0 ${commSubTab === "SCREENING" ? "bg-white shadow text-blue-700" : "text-slate-500"}`}>Approved Mail Editor</button>
           <button onClick={() => setCommSubTab("MASS")} className={`flex-1 md:flex-none px-3.5 sm:px-4 py-2 text-xs font-bold rounded-lg transition-all text-center whitespace-nowrap shrink-0 ${commSubTab === "MASS" ? "bg-white shadow text-blue-700" : "text-slate-500"}`}>Mass Broadcast</button>
           <button onClick={() => setCommSubTab("DIRECT")} className={`flex-1 md:flex-none px-3.5 sm:px-4 py-2 text-xs font-bold rounded-lg transition-all text-center whitespace-nowrap shrink-0 ${commSubTab === "DIRECT" ? "bg-white shadow text-blue-700" : "text-slate-500"}`}>Direct Mail</button>
+          <button onClick={() => setCommSubTab("SMTP" as any)} className={`flex-1 md:flex-none px-3.5 sm:px-4 py-2 text-xs font-bold rounded-lg transition-all text-center whitespace-nowrap shrink-0 ${commSubTab === ("SMTP" as any) ? "bg-white shadow text-amber-600" : "text-slate-500"}`}>SMTP Config</button>
         </div>
       </div>
 
@@ -190,6 +191,39 @@ Cybersecurity Club • UIET CSJM University`;
             </button>
           </div>
         </form>
+      )}
+
+      {commSubTab === ("SMTP" as any) && (
+        <div className="space-y-6 animate-in fade-in">
+          <div className="clay-inset p-5 rounded-2xl text-xs sm:text-sm text-amber-700 bg-amber-50/50 border border-amber-200 shadow-inner">
+            <strong>SMTP Server Identity:</strong> Configure the official club email address. These credentials are saved securely in the database and will be used globally by the system to dispatch all emails natively. 
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">SMTP Host Server</label>
+              <input type="text" className="clay-input w-full px-4 py-3 text-sm font-semibold" placeholder="smtp.gmail.com" defaultValue="smtp.gmail.com" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">Network Port</label>
+              <input type="number" className="clay-input w-full px-4 py-3 text-sm font-semibold" placeholder="465" defaultValue="465" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">Official Club Email</label>
+              <input type="email" className="clay-input w-full px-4 py-3 text-sm font-semibold" placeholder="e.g. cyberclub@csjmu.ac.in" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">App Password (Not Normal Password)</label>
+              <input type="password" className="clay-input w-full px-4 py-3 text-sm font-semibold" placeholder="16-character google app password" />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button className="clay-btn-primary px-8 py-3.5 text-xs sm:text-sm uppercase tracking-wider font-extrabold shadow-lg">
+              Save Global Configuration
+            </button>
+          </div>
+        </div>
       )}
 
       {commSubTab === "DIRECT" && (

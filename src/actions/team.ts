@@ -19,14 +19,7 @@ export async function fetchTeamData() {
   try {
     const users = await prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isApproved: true,
-        createdAt: true
-      }
+      select: { id: true, name: true, email: true, role: true, isApproved: true, createdAt: true, isBlacklisted: true, accountStatus: true }
     });
     return { success: true, data: users };
   } catch (error) {

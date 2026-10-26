@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, Shield, UserCheck, Clock, UserMinus, UserX, Database, CheckCircle, XCircle } from "lucide-react";
+import { Users, Shield, UserCheck, Clock, UserMinus, UserX, Database, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import { fetchTeamData, changeUserAccess } from "@/actions/team";
+import { toggleUserBlacklist, deleteUser } from "@/actions/admin";
 
 type UserData = {
+  isBlacklisted?: boolean;
   id: string;
   name: string;
   email: string;
@@ -50,6 +52,27 @@ export default function TeamTab() {
     } else {
       notify(res.error || "Action failed.", "error");
     }
+    setLoading("");
+  }
+
+  async function handleBlacklist(userId: string, currentStatus: boolean) {
+    setLoading(userId);
+    const res = await toggleUserBlacklist(userId, !currentStatus);
+    if (res.success) {
+      setUsers(users.map(u => u.id === userId ? { ...u, isBlacklisted: !currentStatus } : u));
+      notify(res.message || "Status updated!");
+    } else notify(res.error || "Action failed", "error");
+    setLoading("");
+  }
+
+  async function handleDelete(userId: string) {
+    if (!confirm("Are you sure you want to permanently delete this user? This destroys all associated data.")) return;
+    setLoading(userId);
+    const res = await deleteUser(userId);
+    if (res.success) {
+      setUsers(users.filter(u => u.id !== userId));
+      notify("User deleted permanently.");
+    } else notify(res.error || "Failed to delete user.", "error");
     setLoading("");
   }
 
@@ -206,12 +229,27 @@ export default function TeamTab() {
                     Joined: {new Date(user.createdAt).toLocaleDateString()}
                   </span>
                   <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0 ${
+                    user.isBlacklisted ? 'bg-red-100 text-red-700 border border-red-200 shadow-sm animate-pulse' :
                     user.role === 'CLUB_ADMIN' ? 'bg-blue-100 text-blue-700' :
                     user.role === 'EXECUTIVE' ? 'bg-purple-100 text-purple-700' :
                     'bg-slate-200 text-slate-600'
                   }`}>
-                    {user.role}
+                    {user.isBlacklisted ? 'BLOCKED' : user.role}
                   </span>
+                </div>
+
+                {/* Admin Danger Controls */}
+                <div className="flex items-center gap-2 pt-2 mt-2 border-t border-slate-200/60 sm:border-none sm:pt-0 sm:mt-0 w-full sm:w-auto justify-end">
+                   {user.role !== 'CLUB_ADMIN' && (
+                     <>
+                       <button onClick={() => handleBlacklist(user.id, user.isBlacklisted || false)} disabled={loading === user.id} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-colors ${user.isBlacklisted ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'}`}>
+                         {user.isBlacklisted ? 'Restore Access' : 'Blacklist'}
+                       </button>
+                       <button onClick={() => handleDelete(user.id)} disabled={loading === user.id} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Delete User Completely">
+                         <Trash2 className="w-3.5 h-3.5" />
+                       </button>
+                     </>
+                   )}
                 </div>
               </div>
             ))}

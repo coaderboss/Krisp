@@ -23,60 +23,70 @@ async function requireSupremeAdmin() {
   return session;
 }
 
-// 1. Fetch current form questions from the New Architecture
-export async function getFormFields() {
+// 1. Fetch ALL Forms with their full architecture
+export async function getAllFormsAdmin() {
+  await requireAdmin();
   try {
-    const fields = await prisma.formQuestion.findMany({
-      orderBy: { orderIndex: 'asc' }
+    const forms = await prisma.form.findMany({
+      include: {
+        questions: { orderBy: { orderIndex: 'asc' } }
+      },
+      orderBy: { createdAt: 'asc' }
     });
-    return { success: true, data: fields };
+    return { success: true, data: forms };
   } catch (error) {
-    return { error: "Failed to fetch form fields." };
+    return { error: "Failed to fetch system forms." };
   }
 }
 
-// 2. Save the entire form structure to Database
-export async function saveFormFields(fields: any[]) {
-  await requireSupremeAdmin(); // 🟢 FIX: Maker-Checker Security Bypass - Only Admin can directly publish!
+// 2. Save Complete Form Architecture (SPA Payload)
+export async function saveCompleteForm(formId: string, formMeta: any, fields: any[]) {
+  await requireSupremeAdmin();
   
   const highlightedCount = fields.filter((f: any) => f.isHighlighted).length;
   if (highlightedCount > 4) {
-    return { error: "Validation Error: You can pin a maximum of 4 fields to the dashboard." };
+    return { error: "Validation Error: Maximum 4 fields can be pinned to the Vault." };
   }
   
   try {
-    // 💡 FIX: For Multi-form setup, we need the exact Form ID from frontend payload, 
-    // but to preserve the existing signature temporarily, we'll fetch the targeted form 
-    // or rely on a wrapper function. Since this currently targets a generic active form:
-    let activeForm = await prisma.form.findFirst({
-      where: { isActive: true }
-    });
-
-    if (!activeForm) {
-      activeForm = await prisma.form.create({
+    let targetForm = await prisma.form.findUnique({ where: { id: formId } });
+    
+    if (!targetForm) {
+      targetForm = await prisma.form.create({
         data: {
-          title: "Master Form: Weekly Bulletin",
-          description: "Live application form",
-          isActive: true,
-          isMaster: true,
-          formMode: "QUEUE",
-          hasDeclaration: true,
-          declarationText: "I hereby declare that all information provided is accurate to the best of my knowledge."
+          id: formId.startsWith("new_") ? undefined : formId,
+          title: formMeta.title || "Untitled Form",
+          description: formMeta.description || "",
+          instructionText: formMeta.instructionText || "",
+          isActive: formMeta.isActive ?? false,
+          isMaster: formMeta.isMaster ?? false,
+          execVaultAccess: formMeta.execVaultAccess ?? true,
+          formMode: formMeta.formMode || "NORMAL",
+          hasDeclaration: formMeta.hasDeclaration ?? false,
+          declarationText: formMeta.declarationText || ""
         }
       });
-    } else if (!activeForm.isMaster) {
-      activeForm = await prisma.form.update({
-        where: { id: activeForm.id },
-        data: { isMaster: true }
+    } else {
+      targetForm = await prisma.form.update({
+        where: { id: targetForm.id },
+        data: {
+          title: formMeta.title,
+          description: formMeta.description,
+          instructionText: formMeta.instructionText,
+          isActive: formMeta.isActive,
+          formMode: formMeta.formMode,
+          hasDeclaration: formMeta.hasDeclaration,
+          declarationText: formMeta.declarationText
+        }
       });
     }
 
-    // 🟢 FIX: Match Schema exactly
+    // Replace all fields accurately
     await prisma.$transaction([
-      prisma.formQuestion.deleteMany({ where: { formId: activeForm.id } }),
+      prisma.formQuestion.deleteMany({ where: { formId: targetForm.id } }),
       prisma.formQuestion.createMany({
         data: fields.map((f: any, index: number) => ({
-          formId: activeForm.id,
+          formId: targetForm.id,
           fieldName: f.fieldName || `field_${Date.now()}_${index}`,
           fieldLabel: f.fieldLabel,
           fieldType: f.fieldType,
@@ -84,7 +94,8 @@ export async function saveFormFields(fields: any[]) {
           isRequired: f.isRequired,
           isHighlighted: f.isHighlighted || false,
           placeholder: f.placeholder || "",
-          maxLength: f.wordLimit ? Number(f.wordLimit) : null,
+          maxLength: f.maxLength ? Number(f.maxLength) : null,
+          isMultiSelect: f.isMultiSelect || false,
           orderIndex: index
         }))
       })
@@ -92,10 +103,10 @@ export async function saveFormFields(fields: any[]) {
 
     revalidatePath("/dashboard");
     revalidatePath("/admin");
-    return { success: true, message: "Form successfully published! Highlights updated on Dashboard." };
+    return { success: true, message: "Form Architecture Published Successfully!" };
   } catch (error) {
     console.error("Save Form Error:", error);
-    return { error: "Failed to save form structure to database." };
+    return { error: "Database transaction failed while saving form." };
   }
 }
 

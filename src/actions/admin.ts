@@ -144,14 +144,46 @@ export async function toggleStudentSelection(applicationId: string, slotId: stri
 export async function updateApplicationStatus(applicationId: string, status: AppStatus) {
   await requireAdmin();
 
-  await prisma.application.update({
-    where: { id: applicationId },
-    data: { status },
-  });
+  try {
+    await prisma.application.update({
+      where: { id: applicationId },
+      data: { status },
+    });
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Failed to update status." };
+  }
+}
 
-  revalidatePath("/admin");
-  revalidatePath("/");
-  return { success: true };
+// 4b. Global Media Engine (SPA Integration)
+export async function getGlobalMedia() {
+  await requireAdmin();
+  const settings = await prisma.clubSettings.findUnique({ where: { id: "global" } });
+  return { 
+    success: true, 
+    data: { 
+      title: settings?.mediaTitle || "Featured Cyber Bulletin Episode", 
+      limit: settings?.mediaLimit || 1, 
+      urls: settings?.mediaUrls || "[]" 
+    } 
+  };
+}
+
+export async function updateGlobalMedia(mediaTitle: string, mediaLimit: number, mediaUrls: string) {
+  await requireAdmin();
+  try {
+    await prisma.clubSettings.upsert({
+      where: { id: "global" },
+      update: { mediaTitle, mediaLimit, mediaUrls },
+      create: { id: "global", mediaTitle, mediaLimit, mediaUrls }
+    });
+    revalidatePath("/");
+    return { success: true, message: "Homepage Media Engine updated & published successfully!" };
+  } catch (error) {
+    return { error: "Failed to publish media settings." };
+  }
 }
 
 // 5. Toggle Publish
@@ -326,4 +358,148 @@ export async function fetchAllApplications() {
     console.error("Vault Fetch Error:", error);
     return { error: "Failed to fetch applications from the data vault." };
   }
+}
+
+// ==========================================
+// PHASE 1: VAULT & TEAM SECURITY ACTIONS
+// ==========================================
+
+// 11. Permanently Delete Vault Entry
+export async function deleteVaultEntry(id: string, isMaster: boolean) {
+  await requireSupremeAdmin();
+  try {
+    if (isMaster) {
+      await prisma.application.delete({ where: { id } });
+    } else {
+      await prisma.formResponse.delete({ where: { id } });
+    }
+    revalidatePath("/admin");
+    return { success: true, message: "Record permanently purged from database." };
+  } catch (error) {
+    return { error: "Action failed." };
+  }
+}
+
+// 12. Allow Reattempt (Clears old record, unlocks form)
+export async function allowReattempt(id: string, isMaster: boolean) {
+  await requireAdmin();
+  try {
+    if (isMaster) {
+      await prisma.application.delete({ where: { id } });
+    } else {
+      await prisma.formResponse.delete({ where: { id } });
+    }
+    revalidatePath("/admin");
+    return { success: true, message: "Entry cleared. Student can now resubmit." };
+  } catch (error) {
+    return { error: "Failed to process reattempt." };
+  }
+}
+
+// 13. Blacklist User (Suspends Account)
+export async function toggleUserBlacklist(userId: string, isBlacklisted: boolean) {
+  await requireSupremeAdmin();
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isBlacklisted, accountStatus: isBlacklisted ? "SUSPENDED" : "ACTIVE" }
+    });
+    revalidatePath("/admin");
+    return { success: true, message: isBlacklisted ? "User completely blocked from system." : "User access restored." };
+  } catch (error) {
+    return { error: "Failed to update user identity." };
+  }
+}
+
+// 14. Permanent User Deletion
+export async function deleteUser(userId: string) {
+  await requireSupremeAdmin();
+  try {
+    await prisma.user.delete({ where: { id: userId } });
+    revalidatePath("/admin");
+    return { success: true, message: "User deleted." };
+  } catch (error) {
+    return { error: "Deletion failed." };
+  }
+}
+
+// ==========================================
+// PHASE 2: COMMAND CENTER (OVERVIEW & ATTENDANCE)
+// ==========================================
+
+export async function getOverviewMetrics() {
+  await requireAdmin();
+  const [totalUsers, activeForms, totalSubmissions, todayEvents] = await Promise.all([
+    prisma.user.count(),
+    prisma.form.count({ where: { isActive: true } }),
+    prisma.formResponse.count(),
+    prisma.clubEvent.count({
+      where: {
+        eventDate: {
+          gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          lt: new Date(new Date().setHours(23, 59, 59, 999))
+        }
+      }
+    })
+  ]);
+  return { success: true, data: { totalUsers, activeForms, totalSubmissions, todayEvents } };
+}
+
+export async function getClubEvents() {
+  await requireAdmin();
+  const events = await prisma.clubEvent.findMany({
+    orderBy: { eventDate: "asc" },
+    include: { attendanceSession: true }
+  });
+  return { success: true, data: events };
+}
+
+export async function createClubEvent(title: string, description: string, eventType: string, eventDate: Date) {
+  await requireAdmin();
+  try {
+    await prisma.clubEvent.create({
+      data: { title, description, eventType, eventDate }
+    });
+    revalidatePath("/admin");
+    return { success: true, message: "Event scheduled successfully." };
+  } catch (error) {
+    return { error: "Failed to create event." };
+  }
+}
+
+export async function startAttendanceSession(eventId: string) {
+  await requireAdmin();
+  const secretCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  
+  try {
+    const session = await prisma.attendanceSession.upsert({
+      where: { eventId },
+      update: { isActive: true, secretCode },
+      create: { eventId, title: "Live Session", date: new Date(), secretCode, isActive: true },
+    });
+    return { success: true, data: session };
+  } catch (error) {
+    return { error: "Failed to start session." };
+  }
+}
+
+export async function stopAttendanceSession(sessionId: string) {
+  await requireAdmin();
+  await prisma.attendanceSession.update({
+    where: { id: sessionId },
+    data: { isActive: false }
+  });
+  return { success: true, message: "Session closed." };
+}
+
+export async function getLiveAttendance(sessionId: string) {
+  await requireAdmin();
+  const records = await prisma.attendanceRecord.findMany({
+    where: { sessionId },
+    include: { 
+      user: { select: { name: true, email: true, rollNumber: true, department: true } } 
+    },
+    orderBy: { markedAt: "desc" }
+  });
+  return { success: true, data: records };
 }

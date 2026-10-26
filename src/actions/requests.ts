@@ -71,8 +71,13 @@ export async function approveRequest(requestId: string) {
       }
 
       // 💡 Find active Form or Create it
-      let targetForm = await prisma.form.findFirst({ where: { isActive: true } });
+      const payloadObj = payload;
+// Exact targeted form ID to prevent blind overwriting
+let targetForm = await prisma.form.findUnique({ where: { id: payloadObj.formId || "master" } });
       
+      if (!targetForm) {
+        targetForm = await prisma.form.findFirst({ where: { isMaster: true } });
+      }
       if (!targetForm) {
         targetForm = await prisma.form.create({
           data: {
