@@ -11,18 +11,26 @@ import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Html5Qrcode } from "html5-qrcode"; // 🟢 ADDED QR SCANNER LIBRARY
-// Zero-dependency Client-side XSS Sanitizer for instruction blocks
+// 🟢 SECURITY FIX: Robust Zero-Dependency Client-Side XSS Sanitizer
 const DOMPurify = {
   sanitize: (html: string) => {
     if (!html) return "";
-    return html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, "")
-      .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, "")
-      .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, "")
-      .replace(/\son\w+\s*=\s*(['"]).*?\1/gi, "")
-      .replace(/\son\w+\s*=\s*[^\s>]+/gi, "")
-      .replace(/javascript\s*:/gi, "");
+    if (typeof window === 'undefined') return html; // SSR fallback
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const elements = doc.querySelectorAll('*');
+    for (let i = 0; i < elements.length; i++) {
+      const el = elements[i];
+      if (['SCRIPT', 'IFRAME', 'OBJECT', 'EMBED', 'META', 'STYLE', 'LINK', 'BASE'].includes(el.tagName)) {
+        el.remove(); continue;
+      }
+      const attrs = el.attributes;
+      for (let j = attrs.length - 1; j >= 0; j--) {
+        if (attrs[j].name.toLowerCase().startsWith('on') || attrs[j].value.toLowerCase().includes('javascript:')) {
+          el.removeAttribute(attrs[j].name);
+        }
+      }
+    }
+    return doc.body.innerHTML;
   }
 }; 
 
@@ -37,6 +45,9 @@ export default function StudentDashboard() {
   const [selectedForm, setSelectedForm] = useState<any | null>(null);
   const [selectedRoadmapStep, setSelectedRoadmapStep] = useState<any | null>(null);
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
+  
+  // 🟢 LOGIC FIX: Track selected files for dynamic UI feedback
+  const [selectedFiles, setSelectedFiles] = useState<Record<string, string>>({});
 
   // Attendance States (Frontend System)
   const [attendanceCode, setAttendanceCode] = useState("");
@@ -176,7 +187,26 @@ export default function StudentDashboard() {
   const handleApplyClick = (form: any) => {
     setSelectedForm(form);
     setDeclarationAccepted(false);
-    setCurrentView("INSTRUCTIONS");
+    
+    // 🟢 LOGIC FIX: Strict check for explicitly disabled instructions
+    let skipInstructions = false;
+    if (form.instructionText) {
+      try {
+        const parsed = JSON.parse(form.instructionText);
+        if (parsed.isEnabled === false) {
+          skipInstructions = true;
+        } else {
+          const blocks = Array.isArray(parsed) ? parsed : parsed.blocks;
+          if (!blocks || blocks.length === 0) skipInstructions = true;
+        }
+      } catch {
+        if (!form.instructionText.trim()) skipInstructions = true;
+      }
+    } else {
+      skipInstructions = true;
+    }
+
+    setCurrentView(skipInstructions ? "FORM" : "INSTRUCTIONS");
   };
 
   const handleStatusClick = (form: any) => {
@@ -444,8 +474,9 @@ export default function StudentDashboard() {
 
                     <div className="relative z-10 flex flex-col h-full">
                       <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
-                        <span className={`text-[9px] font-black px-3 py-1.5 rounded-md uppercase tracking-widest shadow-sm border ${form.isMaster ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-blue-100 text-blue-800 border-blue-200"}`}>
-                          {form.isMaster ? "⭐ Core Selection Program" : "📄 Public Event Form"}
+                        <span className={`text-[9px] font-black px-3 py-1.5 rounded-md uppercase tracking-widest shadow-sm border ${form.formMode === "QUEUE" ? "bg-amber-100 text-amber-800 border-amber-200" : form.formMode === "NORMAL" ? "bg-purple-100 text-purple-800 border-purple-200" : "bg-blue-100 text-blue-800 border-blue-200"}`}>
+                          {/* 🟢 LOGIC FIX: Dynamic form badges based on actual database mode */}
+                          {form.formMode === "QUEUE" ? "⭐ CORE SELECTION" : form.formMode === "NORMAL" ? "📄 STANDARD FORM" : "📅 EVENT FORM"}
                         </span>
                         {submitted && <span className="flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-md border border-emerald-200 uppercase tracking-widest"><CheckCircle2 className="w-3.5 h-3.5" /> Secured</span>}
                       </div>
@@ -978,8 +1009,16 @@ export default function StudentDashboard() {
                     <input type="text" name={field.fieldLabel} required={field.isRequired} maxLength={field.maxLength || undefined} className="clay-input w-full px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-shadow" placeholder={field.placeholder || "Type your answer..."} />
                   )}
                   
+                  {/* 🟢 LOGIC FIX: Typescript safe number limitation */}
                   {field.fieldType === "NUMBER" && (
-                    <input type="number" name={field.fieldLabel} required={field.isRequired} max={field.maxLength ? '9'.repeat(field.maxLength) : undefined} className="clay-input w-full px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-shadow" placeholder={field.placeholder || "Enter a valid number..."} />
+                    <input type="number" name={field.fieldLabel} required={field.isRequired} 
+                      onInput={(e: React.FormEvent<HTMLInputElement>) => {
+                        const target = e.currentTarget;
+                        if (field.maxLength && target.value.length > field.maxLength) {
+                          target.value = target.value.slice(0, field.maxLength);
+                        }
+                      }} 
+                      className="clay-input w-full px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-shadow" placeholder={field.placeholder || (field.maxLength ? `Max length: ${field.maxLength}` : "Enter a valid number...")} />
                   )}
                   
                   {field.fieldType === "DROPDOWN" && (
@@ -1006,11 +1045,28 @@ export default function StudentDashboard() {
                   )}
 
                   {field.fieldType === "FILE_UPLOAD" && (
-                    <div className="clay-inset p-6 rounded-2xl border-2 border-slate-200 border-dashed bg-slate-50 hover:bg-blue-50 hover:border-blue-200 transition-all cursor-pointer flex flex-col items-center justify-center group relative overflow-hidden">
-                      <input type="file" name={field.fieldLabel} required={field.isRequired} accept={field.options?.join(',')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                      <Upload className="w-8 h-8 text-blue-400 group-hover:text-blue-600 mb-2 transition-colors" />
-                      <p className="text-sm font-extrabold text-blue-700">Click or drag file to upload</p>
-                      <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Allowed: {(field.options || []).join(', ') || 'Any'} • MAX {field.maxLength || 5}MB</p>
+                    <div className={`clay-inset p-6 rounded-2xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center group relative overflow-hidden ${selectedFiles[field.fieldLabel] ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200 hover:bg-blue-50 hover:border-blue-200'}`}>
+                      <input type="file" name={field.fieldLabel} required={field.isRequired} accept={field.options?.join(',')} 
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setSelectedFiles(prev => ({ ...prev, [field.fieldLabel]: e.target.files![0].name }));
+                          }
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                      />
+                      {selectedFiles[field.fieldLabel] ? (
+                        <>
+                          <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2 scale-110 transition-transform" />
+                          <p className="text-sm font-extrabold text-emerald-700 text-center px-4 truncate w-full">{selectedFiles[field.fieldLabel]}</p>
+                          <p className="text-[10px] font-bold text-emerald-600/80 mt-1 uppercase tracking-widest">Ready to submit</p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 text-blue-400 group-hover:text-blue-600 mb-2 transition-colors" />
+                          <p className="text-sm font-extrabold text-blue-700">Click or drag file to upload</p>
+                          <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Allowed: {(field.options || []).join(', ') || 'Any'} • MAX {field.maxLength || 5}MB</p>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

@@ -115,23 +115,30 @@ export async function generateAdminOTP(formData: FormData) {
   }
 
   try {
-    // 💡 MASTER KEY LOGIC: .env admin ke liye OTP hamesha 123456 rahega
-    const token = isEnvAdmin ? "123456" : Math.floor(100000 + Math.random() * 900000).toString();
+    // 🟢 SECURITY FIX: Removed 123456 Backdoor. Strict Crypto PRNG for ALL Admins.
+    const token = crypto.randomInt(100000, 999999).toString();
     const expires = new Date(new Date().getTime() + 10 * 60 * 1000); 
 
     await prisma.twoFactorToken.deleteMany({ where: { email } });
     await prisma.twoFactorToken.create({ data: { email, token, expires } });
 
-    // Agar fake .env admin hai toh mail bhejne ka function call hi mat karo
-    if (!isEnvAdmin) {
+    // 🛠️ SMART DEV MODE: Localhost pe OTP seedha VS Code terminal me dikhega
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`\n========================================`);
+      console.log(`🔐 [DEV MODE] ADMIN LOGIN OTP: ${token}`);
+      console.log(`========================================\n`);
+    }
+
+    // Email dispatch (SMTP fail hone par bhi login block na ho)
+    try {
       await sendTwoFactorTokenEmail(email, token);
+    } catch (mailErr) {
+      console.error("Mail Dispatch Error (Ignored for Dev Fallback):", mailErr);
     }
 
     return { 
       success: true, 
-      message: isEnvAdmin 
-        ? "Enter your OTP." 
-        : "A secure verification code has been dispatched to your email." 
+      message: "A secure verification code has been dispatched. (Check console if in Dev)" 
     };
   } catch (error) {
     return { error: "Failed to dispatch the verification code. Please try again." };

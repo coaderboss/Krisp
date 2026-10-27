@@ -216,7 +216,7 @@ export async function updateSlotTheme(slotId: string, theme: string) {
 
 // 7. Dispatch Editable Screening Invites
 export async function sendInvitesToShortlisted(slotId: string, customHtmlTemplate: string) {
-  await requireAdmin();
+  await requireSupremeAdmin(); // 🟢 SECURITY FIX: Lock official mass emailer to Supreme Admin only
 
   const slot = await prisma.weeklySlot.findUnique({
     where: { id: slotId },
@@ -263,7 +263,7 @@ export async function sendInvitesToShortlisted(slotId: string, customHtmlTemplat
 
 // 8. Dispatch Mass Emails
 export async function sendMassEmails(recipients: { name: string; email: string }[], subject: string, customHtmlTemplate: string) {
-  await requireAdmin();
+  await requireSupremeAdmin(); // 🟢 SECURITY FIX: Block Open Phishing Relays
 
   if (!recipients || recipients.length === 0) return { error: "No recipients provided." };
 
@@ -296,7 +296,7 @@ export async function sendMassEmails(recipients: { name: string; email: string }
 
 // 9. Dispatch Single Direct Email
 export async function sendDirectEmail(email: string, subject: string, htmlBody: string) {
-  await requireAdmin();
+  await requireSupremeAdmin(); // 🟢 SECURITY FIX: Block Open Phishing Relays
 
   try {
     // FIX: Using global transporter to save server memory
@@ -388,7 +388,7 @@ export async function deleteVaultEntry(id: string, isMaster: boolean) {
 
 // 12. Allow Reattempt (Clears old record, unlocks form)
 export async function allowReattempt(id: string, isMaster: boolean) {
-  await requireAdmin();
+  await requireSupremeAdmin(); // 🟢 SECURITY FIX: Prevent unauthorized data deletion by Executives
   try {
     if (isMaster) {
       await prisma.application.delete({ where: { id } });

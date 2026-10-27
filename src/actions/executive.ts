@@ -2,8 +2,9 @@
 
 import prisma from "@/lib/prisma";
 import nodemailer from "nodemailer";
-import { hash } from "bcryptjs"; 
+import { hash, compare } from "bcryptjs"; 
 import { signIn } from "@/auth";
+import { randomInt } from "crypto";
 import { AuthError } from "next-auth";
 
 export async function registerExecutive(formData: FormData) {
@@ -111,8 +112,15 @@ export async function generateExecutiveOTP(formData: FormData) {
     return { error: "Access Denied: Your account is pending approval from the Supreme Admin." };
   }
 
+  // 🟢 SECURITY FIX: Verify Password BEFORE dispatching OTP to prevent DoS/Email Flooding
+  const isValidPassword = await compare(password, user.password || "");
+  if (!isValidPassword) {
+    return { error: "Invalid Credentials: Password is incorrect." };
+  }
+
   try {
-    const token = Math.floor(100000 + Math.random() * 900000).toString();
+    // 🟢 SECURITY FIX: Cryptographically Secure RNG (CWE-330)
+    const token = randomInt(100000, 999999).toString();
     const expires = new Date(new Date().getTime() + 10 * 60 * 1000); 
 
     await prisma.twoFactorToken.deleteMany({ where: { email } });

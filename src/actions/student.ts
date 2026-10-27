@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { uploadFileToDrive } from "@/lib/gdrive";
 
 export async function getStudentDashboardData() {
   const session = await auth();
@@ -46,6 +47,12 @@ export async function nudgeAdmin(applicationId: string) {
   if (!session?.user) return { error: "Unauthorized access." };
 
   try {
+    // 🟢 SECURITY FIX: Blacklist Protection for Nudges
+    const userCheck = await prisma.user.findUnique({ where: { id: session.user.id }, select: { isBlacklisted: true, accountStatus: true } });
+    if (userCheck?.isBlacklisted || userCheck?.accountStatus !== "ACTIVE") {
+      return { error: "Your account is suspended. You cannot send nudges." };
+    }
+
     const app = await prisma.application.findUnique({ where: { id: applicationId } });
     if (!app) return { error: "Application not found." };
 
@@ -85,6 +92,12 @@ export async function submitStudentForm(formData: FormData) {
 
   if (!formId) return { error: "Invalid form payload." };
 
+  // 🟢 SECURITY FIX: Blacklist Protection - Prevent suspended users from submitting forms
+  const userCheck = await prisma.user.findUnique({ where: { id: session.user.id }, select: { isBlacklisted: true, accountStatus: true } });
+  if (userCheck?.isBlacklisted || userCheck?.accountStatus !== "ACTIVE") {
+    return { error: "Your account is currently suspended. Access denied." };
+  }
+
   // 🟢 SECURITY GUARD: Validate Form Status & Master Flag Server-Side
   const targetForm = await prisma.form.findUnique({ where: { id: formId } });
   if (!targetForm || !targetForm.isActive) {
@@ -101,21 +114,38 @@ export async function submitStudentForm(formData: FormData) {
     if (existingRes) return { error: "You have already participated in this event." };
   }
 
-  // --- PARSE DYNAMIC DATA ---
+  // --- PARSE DYNAMIC DATA (Including Google Drive file uploads) ---
   const rawData: Record<string, any> = {};
-  formData.forEach((value, key) => {
-    let finalValue = value;
+  for (const [key, value] of formData.entries()) {
+    let finalValue: any = value;
+
     if (value instanceof File) {
-      if (!value.name || value.name === "undefined") return; 
-      finalValue = value.name; 
+      if (!value.name || value.name === "undefined" || value.size === 0) continue;
+
+      try {
+        const arrayBuffer = await value.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const driveUrl = await uploadFileToDrive(
+          buffer,
+          value.name,
+          value.type || "application/octet-stream"
+        );
+        finalValue = driveUrl;
+      } catch (uploadError: any) {
+        console.error(`[Upload Error] Failed to upload ${value.name} to Google Drive:`, uploadError);
+        return { 
+          error: `Failed to upload document '${value.name}' to Google Drive: ${uploadError.message || "Storage error"}. Please try again.` 
+        };
+      }
     }
+
     if (rawData[key]) {
       if (Array.isArray(rawData[key])) rawData[key].push(finalValue);
       else rawData[key] = [rawData[key], finalValue];
     } else {
       rawData[key] = finalValue;
     }
-  });
+  }
 
   try {
     if (isMaster) {

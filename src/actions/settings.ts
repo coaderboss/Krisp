@@ -41,7 +41,19 @@ export async function getAllFormsAdmin() {
 
 // 2. Save Complete Form Architecture (SPA Payload)
 export async function saveCompleteForm(formId: string, formMeta: any, fields: any[]) {
-  await requireSupremeAdmin();
+  const session = await requireAdmin(); // 🟢 FIX: Allow Executives to access this action
+  
+  const isSupremeAdmin = session?.user?.role === "CLUB_ADMIN";
+
+  // 🟢 SECURITY FIX: Hardcoded Privilege Guard - Executives can NEVER publish forms
+  if (!isSupremeAdmin && formMeta.isActive === true) {
+    return { error: "Security Alert: Executives cannot publish forms live. Please submit for review." };
+  }
+
+  // Force restrictions if it's an Executive (They can only save drafts)
+  const finalIsActive = isSupremeAdmin ? (formMeta.isActive ?? false) : false;
+  const finalIsMaster = isSupremeAdmin ? (formMeta.isMaster ?? false) : false;
+  const finalExecAccess = isSupremeAdmin ? (formMeta.execVaultAccess ?? true) : true;
   
   const highlightedCount = fields.filter((f: any) => f.isHighlighted).length;
   if (highlightedCount > 4) {
@@ -58,9 +70,9 @@ export async function saveCompleteForm(formId: string, formMeta: any, fields: an
           title: formMeta.title || "Untitled Form",
           description: formMeta.description || "",
           instructionText: formMeta.instructionText || "",
-          isActive: formMeta.isActive ?? false,
-          isMaster: formMeta.isMaster ?? false,
-          execVaultAccess: formMeta.execVaultAccess ?? true,
+          isActive: finalIsActive,
+          isMaster: finalIsMaster,
+          execVaultAccess: finalExecAccess,
           formMode: formMeta.formMode || "NORMAL",
           hasDeclaration: formMeta.hasDeclaration ?? false,
           declarationText: formMeta.declarationText || ""
@@ -73,7 +85,7 @@ export async function saveCompleteForm(formId: string, formMeta: any, fields: an
           title: formMeta.title,
           description: formMeta.description,
           instructionText: formMeta.instructionText,
-          isActive: formMeta.isActive,
+          isActive: finalIsActive,
           formMode: formMeta.formMode,
           hasDeclaration: formMeta.hasDeclaration,
           declarationText: formMeta.declarationText

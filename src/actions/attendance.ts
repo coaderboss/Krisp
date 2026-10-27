@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import crypto from "crypto";
 
 // 🟢 SECURITY GUARD ADDED
 async function requireAdminGuard() {
@@ -16,8 +17,9 @@ export async function createAttendanceSession(data: { title: string; date: Date;
   const sessionUser = await auth();
   if (sessionUser?.user?.role !== "CLUB_ADMIN" && sessionUser?.user?.role !== "EXECUTIVE") return { error: "Unauthorized" };
 
-  const secretCode = data.mode === "CODE" ? Math.random().toString(36).substring(2, 8).toUpperCase() : null;
-  const qrPayload = data.mode === "QR" ? `AUTH_${Math.random().toString(36).substring(2, 15)}_${Date.now()}` : null;
+  // 🟢 SECURITY FIX: Cryptographically Secure Randomization (CWE-330)
+  const secretCode = data.mode === "CODE" ? crypto.randomBytes(4).toString("hex").toUpperCase() : null;
+  const qrPayload = data.mode === "QR" ? `AUTH_${crypto.randomBytes(16).toString("hex")}_${Date.now()}` : null;
   
   let deadline = null;
   if (data.type === "TIMER" && data.durationMins) {

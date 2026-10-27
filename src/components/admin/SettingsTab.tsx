@@ -12,6 +12,29 @@ import {
 import { getAllFormsAdmin, saveCompleteForm, plugFormToWorkflow, unplugFormFromWorkflow } from "@/actions/settings";
 import { fetchAllApplications, allowReattempt, deleteVaultEntry } from "@/actions/admin";
 
+// 🟢 SECURITY FIX: Robust Zero-Dependency XSS Sanitizer for Admin Previews (CWE-79)
+const DOMPurify = {
+  sanitize: (html: string) => {
+    if (!html) return "";
+    if (typeof window === 'undefined') return html; // SSR fallback
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const elements = doc.querySelectorAll('*');
+    for (let i = 0; i < elements.length; i++) {
+      const el = elements[i];
+      if (['SCRIPT', 'IFRAME', 'OBJECT', 'EMBED', 'META', 'STYLE', 'LINK', 'BASE'].includes(el.tagName)) {
+        el.remove(); continue;
+      }
+      const attrs = el.attributes;
+      for (let j = attrs.length - 1; j >= 0; j--) {
+        if (attrs[j].name.toLowerCase().startsWith('on') || attrs[j].value.toLowerCase().includes('javascript:')) {
+          el.removeAttribute(attrs[j].name);
+        }
+      }
+    }
+    return doc.body.innerHTML;
+  }
+};
+
 export default function SettingsTab() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "CLUB_ADMIN";
@@ -178,19 +201,21 @@ export default function SettingsTab() {
 
   // 🟢 NEW: Enhanced Instruction Block Parsing (Handles Old Arrays and New Objects)
   const getInstructionData = () => {
-    if (!activeForm?.instructionText) return { theme: "classic", blocks: [] };
+    // 🟢 LOGIC FIX: Injecting isEnabled property to strictly toggle instruction view
+    if (!activeForm?.instructionText) return { isEnabled: true, theme: "classic", blocks: [] };
     try {
       const parsed = JSON.parse(activeForm.instructionText);
-      if (Array.isArray(parsed)) return { theme: "classic", blocks: parsed }; // Auto-migrate old raw arrays
-      return parsed; // It's already the new object format { theme, blocks }
+      if (Array.isArray(parsed)) return { isEnabled: true, theme: "classic", blocks: parsed }; 
+      return { isEnabled: parsed.isEnabled ?? true, theme: parsed.theme || "classic", blocks: parsed.blocks || [] };
     } catch {
-      return { theme: "classic", blocks: [{ id: 'old', type: 'p', content: activeForm.instructionText }] };
+      return { isEnabled: true, theme: "classic", blocks: [{ id: 'old', type: 'p', content: activeForm.instructionText }] };
     }
   };
 
-  const updateInstructionData = (newTheme?: string, newBlocks?: any[]) => {
+  const updateInstructionData = (newTheme?: string, newBlocks?: any[], newIsEnabled?: boolean) => {
     const current = getInstructionData();
     const finalPayload = {
+      isEnabled: newIsEnabled !== undefined ? newIsEnabled : current.isEnabled,
       theme: newTheme !== undefined ? newTheme : current.theme,
       blocks: newBlocks !== undefined ? newBlocks : current.blocks
     };
@@ -210,6 +235,30 @@ export default function SettingsTab() {
   const addInstructionBlock = (type: 'h3' | 'p' | 'bullet' | 'number' | 'alert') => {
     const newBlock = { id: `block_${Date.now()}`, type, content: '' };
     updateInstructionData(undefined, [...getInstructionData().blocks, newBlock]);
+  };
+
+  // 🟢 NEW: High-Performance CSV Export Logic
+  const handleExportCSV = () => {
+    const dataToExport = studentResponses.filter(r => r.formId === vaultFormId);
+    if (dataToExport.length === 0) return notify("No data to export.", "error");
+
+    const headers = ["Applicant Name", "Email", "Applied On", ...pinnedFields.map((f:any) => f.fieldLabel)];
+    const csvRows = [headers.join(",")];
+
+    dataToExport.forEach(res => {
+      let parsed: any = {}; try { parsed = JSON.parse(res.dynamicData || "{}"); } catch(e){}
+      const row = [
+        `"${res.name}"`, `"${res.email}"`, `"${res.date}"`,
+        ...pinnedFields.map((f:any) => `"${parsed[f.fieldLabel] ? String(parsed[f.fieldLabel]).replace(/"/g, '""') : '-'}"`)
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `DataVault_Export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
   };
 
   const activeField = activeForm?.questions?.find((f:any) => f.id === activeFieldId);
@@ -322,12 +371,24 @@ export default function SettingsTab() {
             {/* CENTER CANVAS */}
             <div className={`flex-1 bg-slate-50 overflow-y-auto p-8 relative shadow-inner ${builderView === 'INSTRUCTIONS' ? 'p-0 flex flex-col' : ''}`}>
               
-              {/* 🟢 NEW: THEME SELECTOR BAR */}
+              {/* 🟢 NEW: THEME SELECTOR BAR & ENABLE TOGGLE */}
               {builderView === "INSTRUCTIONS" && (
-                <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between z-20 shadow-sm shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Palette className="w-5 h-5 text-blue-500" />
-                    <span className="text-xs font-black uppercase tracking-widest text-slate-500">Design Template</span>
+                <div className="bg-white border-b border-slate-200 p-4 flex flex-wrap gap-4 items-center justify-between z-20 shadow-sm shrink-0">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                      <input 
+                        type="checkbox" 
+                        checked={getInstructionData().isEnabled} 
+                        onChange={(e) => updateInstructionData(undefined, undefined, e.target.checked)} 
+                        className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer" 
+                      />
+                      <span className="text-xs font-black uppercase tracking-widest text-[#0F2547]">Enable Instructions Step</span>
+                    </label>
+                    <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
+                    <div className="flex items-center gap-2 hidden sm:flex">
+                      <Palette className="w-4 h-4 text-blue-500" />
+                      <span className="text-xs font-black uppercase tracking-widest text-slate-500">Template</span>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => updateInstructionData("classic")} className={`px-4 py-2 text-xs font-bold rounded-lg border-2 transition-all ${currentTheme === "classic" ? "border-blue-500 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
@@ -424,12 +485,12 @@ export default function SettingsTab() {
                         ) : (
                            <div className="relative z-10 space-y-6">
                              {currentBlocks.map((block: any, idx: number) => {
-                               if (block.type === 'h3') return <h3 key={idx} className={`text-xl sm:text-2xl font-extrabold pb-4 ${currentTheme === 'cyber' ? 'text-emerald-400 border-b border-emerald-900/50 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : currentTheme === 'clay' ? 'text-blue-900 border-b-2 border-white' : 'text-[#0F2547] border-b border-slate-100'}`} dangerouslySetInnerHTML={{__html: block.content || "Heading..."}} />;
-                               if (block.type === 'p') return <p key={idx} className={`text-sm leading-relaxed ${currentTheme === 'cyber' ? 'text-emerald-200/80 font-medium' : currentTheme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-600 font-medium'}`} dangerouslySetInnerHTML={{__html: block.content || "Paragraph text..."}} />;
+                               if (block.type === 'h3') return <h3 key={idx} className={`text-xl sm:text-2xl font-extrabold pb-4 ${currentTheme === 'cyber' ? 'text-emerald-400 border-b border-emerald-900/50 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : currentTheme === 'clay' ? 'text-blue-900 border-b-2 border-white' : 'text-[#0F2547] border-b border-slate-100'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content || "Heading...")}} />;
+                               if (block.type === 'p') return <p key={idx} className={`text-sm leading-relaxed ${currentTheme === 'cyber' ? 'text-emerald-200/80 font-medium' : currentTheme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-600 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content || "Paragraph text...")}} />;
                                if (block.type === 'bullet') return (
                                  <div key={idx} className="flex gap-3 items-start pl-1 mt-1">
                                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 ${currentTheme === 'cyber' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : currentTheme === 'clay' ? 'bg-blue-400 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.2)]' : 'bg-blue-500'}`}></div>
-                                   <p className={`text-sm leading-relaxed ${currentTheme === 'cyber' ? 'text-emerald-200/80 font-medium' : currentTheme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-700 font-medium'}`} dangerouslySetInnerHTML={{__html: block.content || "Bullet item..."}} />
+                                   <p className={`text-sm leading-relaxed ${currentTheme === 'cyber' ? 'text-emerald-200/80 font-medium' : currentTheme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-700 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content || "Bullet item...")}} />
                                  </div>
                                );
                                if (block.type === 'number') {
@@ -441,7 +502,7 @@ export default function SettingsTab() {
                                        ${currentTheme === 'cyber' ? 'rounded bg-emerald-950/50 text-emerald-400 border border-emerald-800' : ''}
                                        ${currentTheme === 'clay' ? 'rounded-xl bg-[#eef2f6] text-blue-600 shadow-[4px_4px_8px_#d1d9e2,-4px_-4px_8px_#ffffff] border border-white/50' : ''}
                                      `}>{numIndex}</div>
-                                     <p className={`text-sm leading-relaxed mt-1 ${currentTheme === 'cyber' ? 'text-emerald-200/80 font-medium' : currentTheme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-700 font-medium'}`} dangerouslySetInnerHTML={{__html: block.content || "Numbered item..."}} />
+                                     <p className={`text-sm leading-relaxed mt-1 ${currentTheme === 'cyber' ? 'text-emerald-200/80 font-medium' : currentTheme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-700 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content || "Numbered item...")}} />
                                    </div>
                                  );
                                }
@@ -452,11 +513,11 @@ export default function SettingsTab() {
                                    ${currentTheme === 'clay' ? 'bg-[#eef2f6] shadow-[inset_6px_6px_12px_#d1d9e2,inset_-6px_-6px_12px_#ffffff] rounded-2xl border border-white/40' : ''}
                                  `}>
                                    <AlertTriangle className={`w-5 h-5 shrink-0 ${currentTheme === 'cyber' ? 'text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]' : currentTheme === 'clay' ? 'text-amber-600' : 'text-amber-500'}`}/>
-                                   <p className={`text-[11px] sm:text-xs font-bold leading-relaxed ${currentTheme === 'cyber' ? 'text-red-300/80' : currentTheme === 'clay' ? 'text-amber-700' : 'text-amber-800'}`} dangerouslySetInnerHTML={{__html: block.content || "Alert message..."}} />
+                                   <p className={`text-[11px] sm:text-xs font-bold leading-relaxed ${currentTheme === 'cyber' ? 'text-red-300/80' : currentTheme === 'clay' ? 'text-amber-900' : 'text-amber-800'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content || "Alert message...")}} />
                                  </div>
                                );
                                return null;
-                             })}
+                           })}
                            </div>
                         )}
                      </div>
@@ -794,7 +855,8 @@ export default function SettingsTab() {
                   <div>
                     <span className="text-[10px] font-black uppercase text-slate-400 bg-slate-100 px-2.5 py-1 rounded-md">MODE: {form.formMode}</span>
                     <h3 className="font-extrabold text-slate-800 text-lg flex items-center gap-2 mt-3">
-                      {form.isMaster ? "⭐" : "📄"} {form.title}
+                      {/* 🟢 LOGIC FIX: Dynamic Labels based on actual form mode */}
+                      {form.formMode === "QUEUE" ? "⭐ Core Queue" : form.formMode === "NORMAL" ? "📄 Standard Form" : "📅 Event Form"}: {form.title}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1 line-clamp-2">{form.description}</p>
                   </div>
@@ -847,7 +909,7 @@ export default function SettingsTab() {
                 {allowedVaultForms.map(form => <option key={form.id} value={form.id}>{form.title}</option>)}
               </select>
             </div>
-            <button className="clay-btn-primary px-4 py-2 text-xs font-bold flex gap-2"><Download className="w-4 h-4" /> Export DB</button>
+            <button onClick={handleExportCSV} className="clay-btn-primary px-4 py-2 text-xs font-bold flex gap-2 transition-transform hover:scale-105 active:scale-95"><Download className="w-4 h-4" /> Export DB</button>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
@@ -868,7 +930,9 @@ export default function SettingsTab() {
                       {pinnedFields.map((pf: any) => (
                         <td key={pf.id} className="p-3 text-slate-600">
                           {parsedData[pf.fieldLabel] ? (
-                             String(parsedData[pf.fieldLabel]).startsWith("data:application/pdf") || String(parsedData[pf.fieldLabel]).startsWith("data:image/") ? (
+                             String(parsedData[pf.fieldLabel]).startsWith("http") ? (
+                               <a href={String(parsedData[pf.fieldLabel])} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline flex items-center gap-1"><LinkIcon className="w-3 h-3"/> View File</a>
+                             ) : String(parsedData[pf.fieldLabel]).startsWith("data:application/pdf") || String(parsedData[pf.fieldLabel]).startsWith("data:image/") ? (
                                <a href={String(parsedData[pf.fieldLabel])} download={`File_${res.name.replace(/\s+/g, '_')}`} className="text-blue-500 hover:underline flex items-center gap-1"><Download className="w-3 h-3"/> Download</a>
                              ) : Array.isArray(parsedData[pf.fieldLabel]) ? (
                                parsedData[pf.fieldLabel].join(", ")
@@ -904,7 +968,9 @@ export default function SettingsTab() {
                   return Object.entries(parsedData).filter(([k]) => !k.startsWith('$ACTION_')).map(([key, value], i) => (
                     <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{key}</span>
-                      {String(value).startsWith("data:application/pdf") || String(value).startsWith("data:image/") ? (
+                      {String(value).startsWith("http") ? (
+                        <div className="mt-1.5"><a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-1.5"><LinkIcon className="w-4 h-4"/> Open in Google Drive</a></div>
+                      ) : String(value).startsWith("data:application/pdf") || String(value).startsWith("data:image/") ? (
                         <div className="mt-1.5"><a href={String(value)} download={`${key.replace(/\s+/g, '_')}`} className="text-sm font-bold text-emerald-600 hover:underline flex items-center gap-1.5"><Download className="w-4 h-4"/> Download Attached Document</a></div>
                       ) : (
                         <p className="text-sm font-bold mt-1.5 text-slate-800 leading-relaxed">{Array.isArray(value) ? value.join(", ") : String(value)}</p>

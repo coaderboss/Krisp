@@ -26,10 +26,13 @@ export default async function HomePage() {
   let pastSlots: any[] = [];
   let activeForms: any[] = [];
   let totalEventResponses = 0;
+  let globalMedia: any = null; // 🟢 FIX: Initialize Global Media Variable
 
   try {
     const results = await Promise.all([
       prisma.application.count(),
+      // 🟢 FIX: Fetch Global Media Settings from database
+      prisma.clubSettings.findUnique({ where: { id: "global" } }),
       prisma.weeklySlot.findFirst({
         where: { isPublished: true },
         include: { selectedTrainees: { include: { user: true } } },
@@ -51,10 +54,11 @@ export default async function HomePage() {
     ]);
 
     registeredCount = results[0];
-    activeSlot = results[1];
-    pastSlots = results[2];
-    activeForms = results[3];
-    totalEventResponses = results[4];
+    globalMedia = results[1]; // 🟢 FIX: Map Database Setting
+    activeSlot = results[2];
+    pastSlots = results[3];
+    activeForms = results[4];
+    totalEventResponses = results[5];
   } catch (err) {
     console.warn("HomePage: Database fetch deferred or offline during build.");
   }
@@ -62,8 +66,18 @@ export default async function HomePage() {
   const activeTrainees = activeSlot?.selectedTrainees || [];
   const totalCommunityReach = registeredCount + totalEventResponses;
 
-  // Instagram Reel Embed URL (converted from the provided share link)
-  const officialReelUrl = "https://www.instagram.com/p/DekdEaWzhSa/embed/"; 
+  // 🟢 FIX: Safely parse dynamic media array and extract the first URL (Fallback to default)
+  let officialReelUrl = "https://www.instagram.com/p/DekdEaWzhSa/embed/";
+  try {
+    if (globalMedia?.mediaUrls) {
+      const parsedUrls = JSON.parse(globalMedia.mediaUrls);
+      if (Array.isArray(parsedUrls) && parsedUrls.length > 0) {
+        officialReelUrl = parsedUrls[0]; // Use the first active media URL provided by Admin
+      }
+    }
+  } catch (e) {
+    console.error("Failed to parse global media URLs:", e);
+  }
 
   return (
     <div className="bg-slate-50 min-h-screen pb-20 font-sans selection:bg-blue-200">
