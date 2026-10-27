@@ -117,6 +117,7 @@ export default function AdminDashboardClient({
 
       {activeTab === "OVERVIEW" && <OverviewTab navigateTo={setActiveTab} />}
       {activeTab === "ATTENDANCE" && <AttendancePortal onClose={() => setActiveTab("OVERVIEW")} />}
+      {/* 🟢 FIX: Passing pre-filtered applications strictly meant for Workflow */}
       {activeTab === "WORKFLOW" && <WorkflowTab initialSlot={initialSlot} initialApplications={initialApplications} onNavigateToComm={() => setActiveTab("COMMUNICATION")} />}
       {activeTab === "TEAM" && <TeamTab />}
       {activeTab === "COMMUNICATION" && <CommunicationTab slot={initialSlot} />}
@@ -174,7 +175,22 @@ export default function AdminDashboardClient({
                   </span>
                   <h3 className="text-base sm:text-lg font-extrabold text-[#0F2547]">Changes Diff Viewer</h3>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">Requested by: <strong>{viewingPayload.executive.name}</strong></p>
+                {/* 🟢 FIX: Added strict visual indicator distinguishing Master vs Event Form */}
+                {(() => {
+                  let isMasterPayload = false;
+                  try {
+                    const parsed = JSON.parse(viewingPayload.payload);
+                    isMasterPayload = parsed.isMaster;
+                  } catch(e) {}
+                  return (
+                    <p className="text-xs text-slate-500 mt-2 flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${isMasterPayload ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                        Target: {isMasterPayload ? '⭐ MASTER FORM' : '📄 EVENT FORM'}
+                      </span>
+                      Requested by: <strong>{viewingPayload.executive.name}</strong>
+                    </p>
+                  )
+                })()}
               </div>
               <button onClick={() => setViewingPayload(null)} className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 flex items-center justify-center transition-colors font-bold shadow-sm">✕</button>
             </div>

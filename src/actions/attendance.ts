@@ -93,6 +93,12 @@ export async function markStudentAttendance(sessionId: string, payload: string) 
   if (!authSession?.user?.id) return { error: "Authentication required." };
   const userId = authSession.user.id;
 
+  // 🟢 SECURITY GUARD: Prevent suspended users from marking attendance
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { isBlacklisted: true, accountStatus: true } });
+  if (user?.isBlacklisted || user?.accountStatus !== "ACTIVE") {
+    return { error: "Your account is suspended. You cannot mark attendance." };
+  }
+
   const session = await prisma.attendanceSession.findUnique({ where: { id: sessionId } });
   if (!session) return { error: "Session not found." };
   if (!session.isActive) return { error: "This attendance session has ended." };

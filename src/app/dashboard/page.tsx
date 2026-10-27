@@ -10,6 +10,7 @@ import { getActiveSessionForStudent, markStudentAttendance } from "@/actions/att
 import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Html5Qrcode } from "html5-qrcode"; // 🟢 ADDED QR SCANNER LIBRARY
 // Zero-dependency Client-side XSS Sanitizer for instruction blocks
 const DOMPurify = {
   sanitize: (html: string) => {
@@ -55,6 +56,41 @@ export default function StudentDashboard() {
   const [events, setEvents] = useState<any[]>([]);
   const [activeSession, setActiveSession] = useState<any>(null);
 
+  // 🟢 CAMERA SCANNER EFFECT
+  useEffect(() => {
+    let html5QrCode: Html5Qrcode;
+    let isMounted = true;
+
+    if (isScanning && activeSession?.mode === "QR") {
+      html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCode.start(
+        { facingMode: "environment" }, // Use back camera
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          if (isMounted) {
+            html5QrCode.stop().then(() => {
+              setIsScanning(false);
+              handleMarkAttendance(decodedText);
+            }).catch(console.error);
+          }
+        },
+        (errorMessage) => { /* Background scanning, ignore errors */ }
+      ).catch((err) => {
+         console.error("Camera Error:", err);
+         if (isMounted) {
+           notify("Camera access denied or unavailable.", "error");
+           setIsScanning(false);
+         }
+      });
+    }
+
+    return () => {
+      isMounted = false;
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().catch(console.error);
+      }
+    };
+  }, [isScanning, activeSession]);
   const cyberRoadmap = [
     { step: 1, title: "Networking Basics", icon: Globe, status: "completed", desc: "Understand how data travels across the internet.", topics: ["OSI & TCP/IP Models", "IP Addressing & Subnetting", "DNS, HTTP/HTTPS, FTP", "Wireshark Packet Analysis"] },
     { step: 2, title: "Linux Fundamentals", icon: Terminal, status: "completed", desc: "Master the command line and OS internals.", topics: ["File System Hierarchy", "Permissions & Ownership", "Bash Scripting Basics", "Process Management & Cron"] },
@@ -152,6 +188,18 @@ export default function StudentDashboard() {
     setCurrentView("DASHBOARD");
     setSelectedForm(null);
     setDeclarationAccepted(false);
+  };
+
+  // 🟢 NEW: Parse Theme Data from the instruction JSON
+  const getInstructionData = () => {
+    if (!selectedForm?.instructionText) return { theme: "classic", blocks: [] };
+    try {
+      const parsed = JSON.parse(selectedForm.instructionText);
+      if (Array.isArray(parsed)) return { theme: "classic", blocks: parsed };
+      return parsed;
+    } catch {
+      return { theme: "classic", blocks: [{ id: 'old', type: 'p', content: selectedForm.instructionText }] };
+    }
   };
 
   // 🟢 Real Secure Attendance Handler
@@ -823,66 +871,84 @@ export default function StudentDashboard() {
       {/* VIEW 3: INSTRUCTIONS PAGE (SPA Transition)                  */}
       {/* ========================================================= */}
       {currentView === "INSTRUCTIONS" && selectedForm && (
-        <div className="max-w-4xl mx-auto clay-card p-6 sm:p-10 animate-in slide-in-from-right-8 duration-300">
-          
-          <div className="text-center space-y-3 border-b border-slate-200 pb-8 mb-8">
-            <div className="w-16 h-16 mx-auto bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center clay-inset shadow-inner">
-              <FileText className="w-8 h-8" />
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0F2547]">Official Program Guidelines</h2>
-            <p className="text-sm text-slate-500 font-medium">Please read the following instructions carefully before proceeding to the application form.</p>
-          </div>
-
-          <div className="space-y-6">
-            {(() => {
-              let blocks: any[] = [];
-              try {
-                if (selectedForm.instructionText?.startsWith('[')) {
-                  blocks = JSON.parse(selectedForm.instructionText);
-                } else if (selectedForm.instructionText) {
-                  blocks = [{ id: 'old', type: 'p', content: selectedForm.instructionText }];
-                }
-              } catch { }
-              
-              if (blocks.length === 0) return <div className="text-center py-6 text-slate-400 font-medium">No instructions provided for this form.</div>;
-              
-              return blocks.map((block: any, idx: number) => {
-                if (block.type === 'h3') return <h3 key={idx} className="text-xl sm:text-2xl font-extrabold text-[#0F2547] border-b border-slate-100 pb-3" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.content) }} />;
-                if (block.type === 'p') return <p key={idx} className="text-sm text-slate-600 leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.content) }} />;
-                if (block.type === 'bullet') return (
-                  <div key={idx} className="flex gap-3 items-start pl-1 mt-1">
-                    <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-2"></div>
-                    <p className="text-sm text-slate-700 leading-relaxed font-medium" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.content) }} />
-                  </div>
-                );
-                if (block.type === 'number') {
-                  const numIndex = blocks.slice(0, idx).filter((b: any) => b.type === 'number').length + 1;
-                  return (
-                    <div key={idx} className="flex gap-4 items-start mt-1">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-black flex items-center justify-center shrink-0 border border-blue-200 shadow-sm">{numIndex}</div>
-                      <p className="text-sm text-slate-700 leading-relaxed font-medium mt-1.5" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.content) }} />
+        <div className="max-w-4xl mx-auto animate-in slide-in-from-right-8 duration-500 relative">
+          {(() => {
+            const { theme, blocks } = getInstructionData();
+            
+            return (
+              <div className={`p-8 sm:p-12 transition-all duration-500 relative overflow-hidden
+                 ${theme === 'classic' ? 'bg-white rounded-[32px] border border-slate-200 shadow-lg' : ''}
+                 ${theme === 'cyber' ? 'bg-[#0a0f1a] rounded-[24px] border-2 border-emerald-900/50 shadow-[0_0_40px_rgba(16,185,129,0.1)] font-mono text-emerald-50' : ''}
+                 ${theme === 'clay' ? 'bg-[#eef2f6] rounded-[40px] shadow-[12px_12px_24px_#d1d9e2,-12px_-12px_24px_#ffffff] border-[4px] border-white/60' : ''}
+               `}>
+                  
+                  {/* Decorative Elements */}
+                  {theme === 'cyber' && <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-50"></div>}
+                  {theme === 'clay' && <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-white/40 rounded-full blur-2xl pointer-events-none"></div>}
+                  
+                  <div className="relative z-10 space-y-8">
+                    <div className={`text-center mb-10 pb-8 ${theme === 'cyber' ? 'border-b border-emerald-900/50' : theme === 'clay' ? 'border-b-2 border-white' : 'border-b border-slate-100'}`}>
+                      <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-5 ${theme === 'cyber' ? 'bg-emerald-900/30 text-emerald-500 border border-emerald-500/30 drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]' : theme === 'clay' ? 'bg-[#eef2f6] shadow-[6px_6px_12px_#d1d9e2,-6px_-6px_12px_#ffffff] text-blue-600 border border-white/50' : 'bg-blue-50 text-blue-600 shadow-inner'}`}><FileText className="w-8 h-8" /></div>
+                      <h2 className={`text-2xl sm:text-3xl font-extrabold ${theme === 'cyber' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : theme === 'clay' ? 'text-blue-900 tracking-tight' : 'text-[#0F2547]'}`}>Official Program Guidelines</h2>
+                      <p className={`text-sm mt-3 ${theme === 'cyber' ? 'text-emerald-600 font-bold' : theme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-500 font-medium'}`}>Please read the following instructions carefully before proceeding.</p>
                     </div>
-                  );
-                }
-                if (block.type === 'alert') return (
-                  <div key={idx} className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex gap-3 mt-2">
-                    <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0"/>
-                    <p className="text-xs sm:text-sm text-amber-800 font-bold leading-relaxed" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.content) }} />
+                    
+                    {blocks.length === 0 ? (
+                       <div className={`text-center py-10 text-sm font-bold ${theme === 'cyber' ? 'text-emerald-800' : 'text-slate-400'}`}>No instructions provided for this form.</div>
+                    ) : (
+                       <div className="space-y-6">
+                         {blocks.map((block: any, idx: number) => {
+                           if (block.type === 'h3') return <h3 key={idx} className={`text-xl sm:text-2xl font-extrabold pb-4 ${theme === 'cyber' ? 'text-emerald-400 border-b border-emerald-900/50 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]' : theme === 'clay' ? 'text-blue-950 border-b-2 border-white' : 'text-[#0F2547] border-b border-slate-100'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />;
+                           if (block.type === 'p') return <p key={idx} className={`text-sm leading-relaxed ${theme === 'cyber' ? 'text-emerald-200/80 font-medium' : theme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-600 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />;
+                           if (block.type === 'bullet') return (
+                             <div key={idx} className="flex gap-3 items-start pl-1 mt-1">
+                               <div className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 ${theme === 'cyber' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : theme === 'clay' ? 'bg-blue-400 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.2)]' : 'bg-blue-500'}`}></div>
+                               <p className={`text-sm leading-relaxed ${theme === 'cyber' ? 'text-emerald-200/80 font-medium' : theme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-700 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />
+                             </div>
+                           );
+                           if (block.type === 'number') {
+                             const numIndex = blocks.slice(0, idx).filter((b: any) => b.type === 'number').length + 1;
+                             return (
+                               <div key={idx} className="flex gap-4 items-start mt-1">
+                                 <div className={`w-8 h-8 flex items-center justify-center shrink-0 font-black text-sm mt-0.5
+                                   ${theme === 'classic' ? 'rounded-lg bg-blue-50 text-blue-700 border border-blue-100 shadow-sm' : ''}
+                                   ${theme === 'cyber' ? 'rounded bg-emerald-950/50 text-emerald-400 border border-emerald-800' : ''}
+                                   ${theme === 'clay' ? 'rounded-xl bg-[#eef2f6] text-blue-600 shadow-[4px_4px_8px_#d1d9e2,-4px_-4px_8px_#ffffff] border border-white/50' : ''}
+                                 `}>{numIndex}</div>
+                                 <p className={`text-sm sm:text-base leading-relaxed mt-1 ${theme === 'cyber' ? 'text-emerald-200/80 font-medium' : theme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-700 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />
+                               </div>
+                             );
+                           }
+                           if (block.type === 'alert') return (
+                             <div key={idx} className={`p-5 sm:p-6 flex gap-4 mt-6 
+                               ${theme === 'classic' ? 'bg-amber-50 rounded-2xl border border-amber-100' : ''}
+                               ${theme === 'cyber' ? 'bg-red-950/20 rounded-none border-l-4 border-red-500/50' : ''}
+                               ${theme === 'clay' ? 'bg-[#eef2f6] shadow-[inset_6px_6px_12px_#d1d9e2,inset_-6px_-6px_12px_#ffffff] rounded-3xl border border-white/40' : ''}
+                             `}>
+                               <AlertTriangle className={`w-6 h-6 shrink-0 ${theme === 'cyber' ? 'text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]' : theme === 'clay' ? 'text-amber-500' : 'text-amber-500'}`}/>
+                               <p className={`text-sm sm:text-base font-bold leading-relaxed ${theme === 'cyber' ? 'text-red-300/80' : theme === 'clay' ? 'text-amber-700' : 'text-amber-800'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />
+                             </div>
+                           );
+                           return null;
+                         })}
+                       </div>
+                    )}
+                    
+                    <div className={`mt-12 pt-8 flex justify-end ${theme === 'cyber' ? 'border-t border-emerald-900/50' : theme === 'clay' ? 'border-t-2 border-white' : 'border-t border-slate-200'}`}>
+                      <button 
+                        onClick={() => setCurrentView("FORM")}
+                        className={`px-8 sm:px-10 py-4 sm:py-5 text-sm sm:text-base font-extrabold uppercase tracking-widest flex items-center justify-center gap-3 transition-transform hover:scale-[1.02] active:scale-95
+                          ${theme === 'cyber' ? 'bg-emerald-500 text-black hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 
+                            theme === 'clay' ? 'bg-[#eef2f6] text-blue-700 rounded-[20px] shadow-[6px_6px_12px_#d1d9e2,-6px_-6px_12px_#ffffff] border-2 border-white hover:shadow-[inset_4px_4px_8px_#d1d9e2,inset_-4px_-4px_8px_#ffffff]' : 
+                            'bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-xl'}`}
+                      >
+                        Acknowledge & Proceed <ArrowRight className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
-                );
-                return null;
-              });
-            })()}
-          </div>
-
-          <div className="mt-10 pt-6 border-t border-slate-200 flex justify-end">
-            <button 
-              onClick={() => setCurrentView("FORM")}
-              className="clay-btn-primary px-8 py-4 text-sm font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg hover:scale-105 transition-transform"
-            >
-              Acknowledge & Proceed <ArrowRight className="w-5 h-5" />
-            </button>
-          </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -1028,31 +1094,19 @@ export default function StudentDashboard() {
                   <AnimatePresence mode="wait">
                     {activeSession.mode === "QR" ? (
                       <motion.div key="qr" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col items-center justify-center space-y-6">
-                        <div className="relative w-64 h-64 bg-slate-50 border-4 border-dashed border-purple-200 rounded-3xl flex items-center justify-center overflow-hidden">
+                        <div className="relative w-full max-w-[280px] aspect-square bg-slate-900 border-4 border-slate-800 rounded-3xl flex items-center justify-center overflow-hidden shadow-inner">
                           {isScanning ? (
-                            <>
-                              <motion.div 
-                                animate={{ y: [0, 240, 0] }} 
-                                transition={{ duration: 3, repeat: Infinity, ease: "linear" }} 
-                                className="absolute top-0 left-0 w-full h-1 bg-purple-500 shadow-[0_0_15px_3px_rgba(168,85,247,0.6)] z-20"
-                              ></motion.div>
-                              <Camera className="w-12 h-12 text-slate-300 animate-pulse relative z-10" />
-                            </>
+                            <div id="qr-reader" className="w-full h-full [&>video]:object-cover [&>video]:w-full [&>video]:h-full" />
                           ) : (
-                            <div className="text-center space-y-2">
+                            <div className="text-center space-y-2 bg-slate-50 w-full h-full flex flex-col justify-center items-center">
                               <QrCode className="w-12 h-12 text-slate-300 mx-auto" />
-                              <p className="text-xs font-bold text-slate-400">Scanner Paused</p>
+                              <p className="text-xs font-bold text-slate-400">Camera Off</p>
                             </div>
                           )}
                         </div>
-                        <button onClick={() => setIsScanning(!isScanning)} className="clay-btn px-6 py-2.5 text-xs font-bold text-slate-600">
-                          {isScanning ? "Stop Camera" : "Start Camera"}
+                        <button onClick={() => setIsScanning(!isScanning)} className="clay-btn-primary bg-purple-600 hover:bg-purple-700 w-full py-4 text-sm font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg">
+                          {isScanning ? "Stop Scanner" : "Activate Camera Scanner"}
                         </button>
-                        {isScanning && (
-                           <button onClick={() => handleMarkAttendance()} disabled={loading === "attendance"} className="clay-btn-primary bg-purple-600 hover:bg-purple-700 w-full py-4 text-sm font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg">
-                             {loading === "attendance" ? <Loader2 className="w-5 h-5 animate-spin" /> : "Simulate QR Scan Success"}
-                           </button>
-                        )}
                       </motion.div>
                     ) : (
                       <motion.div key="code" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6 max-w-sm mx-auto">

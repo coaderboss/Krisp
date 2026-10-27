@@ -168,3 +168,36 @@ export async function updateExecutiveApproval(userId: string, isApproved: boolea
     return { error: "Failed to update executive status." };
   }
 }
+
+// 🟢 NEW: PLUG & PLAY WORKFLOW ENGINE
+export async function plugFormToWorkflow(formId: string) {
+  await requireSupremeAdmin();
+  try {
+    // Transaction ensures only 1 form is connected at a time
+    await prisma.$transaction([
+      prisma.form.updateMany({ data: { isMaster: false, formMode: "EVENT" } }),
+      prisma.form.update({ where: { id: formId }, data: { isMaster: true, formMode: "QUEUE" } })
+    ]);
+    revalidatePath("/admin");
+    revalidatePath("/dashboard");
+    return { success: true, message: "Form successfully plugged into Presenter Pipeline!" };
+  } catch (error) {
+    return { error: "Failed to connect form to workflow." };
+  }
+}
+
+// 🟢 NEW: UNPLUG FROM WORKFLOW ENGINE
+export async function unplugFormFromWorkflow(formId: string) {
+  await requireSupremeAdmin();
+  try {
+    await prisma.form.update({
+      where: { id: formId },
+      data: { isMaster: false, formMode: "EVENT" }
+    });
+    revalidatePath("/admin");
+    revalidatePath("/dashboard");
+    return { success: true, message: "Form disconnected from Presenter Pipeline." };
+  } catch (error) {
+    return { error: "Failed to disconnect form." };
+  }
+}

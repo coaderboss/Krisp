@@ -51,7 +51,7 @@ export default function Navbar() {
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="font-extrabold text-xs sm:text-base md:text-lg tracking-tight text-[#0F2547] group-hover:text-blue-700 transition-colors whitespace-nowrap">
-                CYBERSECURITY CLUB
+                CYBERKRISP
               </span>
               
               <span className="hidden lg:inline-block text-[10px] font-black px-2.5 py-0.5 rounded-full bg-blue-100/90 text-blue-900 border border-blue-200 shrink-0">
@@ -59,7 +59,7 @@ export default function Navbar() {
               </span>
             </div>
             <p className="text-[10px] sm:text-xs text-slate-500 font-medium truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs md:max-w-none">
-              Weekly Video Bulletin • Student Presenter Portal
+              UIET CYBERSECURITY CLUB
             </p>
           </div>
         </Link>

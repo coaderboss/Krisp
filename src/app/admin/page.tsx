@@ -55,11 +55,12 @@ export default async function AdminPage() {
     );
   }
 
-  // --- FIX: Form Fields & Unified Applications fetch karke Client ko bhej rahe hain ---
+ // --- FIX: Form Fields & Unified Applications fetch karke Client ko bhej rahe hain ---
   const [slot, appsRes, currentFormFields] = await Promise.all([
     getOrCreateCurrentSlot(),
     fetchAllApplications(), // 🟢 FIX: Uses the unified engine instead of raw Prisma query
     prisma.formQuestion.findMany({
+      where: { form: { isMaster: true } }, // 🟢 ADDED: Only fetch Master form fields to prevent UI crashes
       orderBy: { orderIndex: "asc" }
     })
   ]);

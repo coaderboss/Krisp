@@ -316,34 +316,40 @@ export async function sendDirectEmail(email: string, subject: string, htmlBody: 
 export async function fetchAllApplications() {
   await requireAdmin();
   try {
+    const masterFormConfig = await prisma.form.findFirst({ where: { isMaster: true } });
+    const actualMasterId = masterFormConfig?.id || "master";
+
+    // Reverted to 'appliedAt' to match your Application model in schema.prisma
     const apps = await prisma.application.findMany({
       include: { user: true },
-      orderBy: { appliedAt: "desc" }
+      orderBy: { appliedAt: "desc" } 
     });
 
+    // Reverted to 'submittedAt' to match your FormResponse model in schema.prisma
     const responses = await prisma.formResponse.findMany({
       include: { user: true, form: true },
-      orderBy: { submittedAt: "desc" }
+      orderBy: { submittedAt: "desc" } 
     });
 
     const unifiedData: any[] = [];
 
-    apps.forEach(app => {
+    apps.forEach((app: any) => {
       unifiedData.push({
-        ...app, // Keeps id, status, appliedAt, weeklySlotId to prevent Executive Crash
-        formId: "master",
-        user: app.user, // 🟢 FIX: Restores nested user object!
+        ...app,
+        formId: actualMasterId, // This links the Application to the correct Vault Dropdown ID
+        user: app.user, 
         topicInterested: app.topicInterested || "Not Selected",
         dynamicData: app.dynamicData || "{}",
         highlightedData: app.highlightedData,
+        appliedAt: app.appliedAt 
       });
     });
 
-    responses.forEach(res => {
+    responses.forEach((res: any) => {
       unifiedData.push({
         id: res.id,
         formId: res.formId,
-        user: res.user, // 🟢 FIX: Restores nested user object!
+        user: res.user, 
         topicInterested: res.form.title, 
         dynamicData: res.answersData || "{}",
         highlightedData: null,
@@ -354,8 +360,8 @@ export async function fetchAllApplications() {
     });
 
     return { success: true, data: unifiedData };
-  } catch (error) {
-    console.error("Vault Fetch Error:", error);
+  } catch (error: any) {
+    console.error("Vault Fetch CRASH DETAILS:", error.message || error);
     return { error: "Failed to fetch applications from the data vault." };
   }
 }

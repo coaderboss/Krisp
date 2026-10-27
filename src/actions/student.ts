@@ -78,13 +78,19 @@ export async function submitStudentForm(formData: FormData) {
   const session = await auth();
   if (!session?.user) return { error: "Unauthorized: Please log in to submit your application." };
 
-  // Frontend se formId aur isMaster extract karna
+  // Frontend se formId extract karna
   const formId = formData.get('$formId') as string;
-  const isMaster = formData.get('$isMaster') === 'true';
   formData.delete('$formId');
-  formData.delete('$isMaster');
+  formData.delete('$isMaster'); // SECURITY: Ignore client's isMaster to prevent tampering
 
   if (!formId) return { error: "Invalid form payload." };
+
+  // 🟢 SECURITY GUARD: Validate Form Status & Master Flag Server-Side
+  const targetForm = await prisma.form.findUnique({ where: { id: formId } });
+  if (!targetForm || !targetForm.isActive) {
+    return { error: "This application form is closed and no longer accepting entries." };
+  }
+  const isMaster = Boolean(targetForm.isMaster);
 
   // --- DUPLICATE CHECK LOGIC ---
   if (isMaster) {
