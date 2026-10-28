@@ -4,21 +4,21 @@
   "description": "Official Student Event and Application Portal for Cybersecurity Club UIET",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#2563eb",
+  "background_color": "#0F2547",
+  "theme_color": "#0F2547",
   "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/cyberpng.png",
-      "sizes": "192x192",
+      "sizes": "192x192 512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/cyberpng.png",
-      "sizes": "512x512",
+      "sizes": "192x192 512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ]
 }
