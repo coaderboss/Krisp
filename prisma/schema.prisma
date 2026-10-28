@@ -63,6 +63,7 @@ model User {
   requests          AdminRequest[]
   formResponses     FormResponse[]
   attendanceRecords AttendanceRecord[]
+  pushSubscriptions PushSubscription[]
 }
 
 // ==========================================
@@ -301,4 +302,14 @@ model AttendanceRecord {
 
   // SECURITY: Ek session mein ek user sirf ek baar entry le sakta hai
   @@unique([sessionId, userId])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }

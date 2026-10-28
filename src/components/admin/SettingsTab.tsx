@@ -187,6 +187,40 @@ export default function SettingsTab() {
     setLoading("");
   };
 
+  // 🟢 NEW LOGIC: Portal Visibility Toggle
+  const toggleFormActiveStatus = async (formId: string, currentStatus: boolean) => {
+    setLoading(`toggle_active_${formId}`);
+    try {
+      const res = await saveCompleteForm(formId, { isActive: !currentStatus }, activeForm?.questions || []);
+      if (res.success) {
+        setForms(forms.map(f => f.id === formId ? { ...f, isActive: !currentStatus } : f));
+        notify(currentStatus ? "Portal intake disabled (HIDDEN)" : "Portal intake enabled (LIVE)", "success");
+      } else {
+        notify("Failed to change visibility", "error");
+      }
+    } catch (error) {
+      notify("Network error", "error");
+    }
+    setLoading("");
+  };
+
+  // 🟢 NEW LOGIC: Exec Vault Access Toggle
+  const toggleExecVaultAccess = async (formId: string, currentAccess: boolean) => {
+    setLoading(`toggle_vault_${formId}`);
+    try {
+      const res = await saveCompleteForm(formId, { execVaultAccess: !currentAccess }, activeForm?.questions || []);
+      if (res.success) {
+        setForms(forms.map(f => f.id === formId ? { ...f, execVaultAccess: !currentAccess } : f));
+        notify(!currentAccess ? "Exec access granted" : "Exec access revoked", "success");
+      } else {
+        notify("Failed to change vault access", "error");
+      }
+    } catch (error) {
+      notify("Network error", "error");
+    }
+    setLoading("");
+  };
+
   const handlePlugForm = async (formId: string) => {
     setLoading("plug_" + formId);
     const res = await plugFormToWorkflow(formId);
@@ -864,11 +898,34 @@ export default function SettingsTab() {
                 <div className="space-y-3 pt-4 border-t border-slate-100">
                   <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <span className="text-xs font-bold text-slate-600 flex items-center gap-2"><Globe className="w-4 h-4 text-blue-500" /> Portal Visibility</span>
-                    <span className={`text-[10px] font-black px-2 py-1 rounded-full ${form.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>{form.isActive ? "LIVE" : "HIDDEN"}</span>
+                    {isAdmin ? (
+                      <button 
+                        onClick={() => toggleFormActiveStatus(form.id, form.isActive)} 
+                        disabled={loading.startsWith("toggle")}
+                        className={`text-[10px] font-black px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-sm border ${form.isActive ? "bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-red-100 hover:text-red-700 hover:border-red-300" : "bg-slate-200 text-slate-500 border-slate-300 hover:bg-emerald-100 hover:text-emerald-700 hover:border-emerald-300"}`}
+                        title={form.isActive ? "Click to Disable Intake" : "Click to Enable Intake"}
+                      >
+                        {form.isActive ? "LIVE" : "HIDDEN"}
+                      </button>
+                    ) : (
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${form.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>{form.isActive ? "LIVE" : "HIDDEN"}</span>
+                    )}
                   </div>
+
                   <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <span className="text-xs font-bold text-slate-600 flex items-center gap-2"><Lock className="w-4 h-4 text-amber-500" /> Exec Vault Access</span>
-                    <span className={`text-[10px] font-black px-2 py-1 rounded-full ${form.execVaultAccess ? "bg-purple-100 text-purple-700" : "bg-slate-200 text-slate-500"}`}>{form.execVaultAccess ? "GRANTED" : "DENIED"}</span>
+                    {isAdmin ? (
+                      <button 
+                        onClick={() => toggleExecVaultAccess(form.id, form.execVaultAccess)} 
+                        disabled={loading.startsWith("toggle")}
+                        className={`text-[10px] font-black px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-sm border ${form.execVaultAccess ? "bg-purple-100 text-purple-700 border-purple-300 hover:bg-slate-200 hover:text-slate-500 hover:border-slate-300" : "bg-slate-200 text-slate-500 border-slate-300 hover:bg-purple-100 hover:text-purple-700 hover:border-purple-300"}`}
+                        title={form.execVaultAccess ? "Click to Revoke Access" : "Click to Grant Access"}
+                      >
+                        {form.execVaultAccess ? "GRANTED" : "DENIED"}
+                      </button>
+                    ) : (
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${form.execVaultAccess ? "bg-purple-100 text-purple-700" : "bg-slate-200 text-slate-500"}`}>{form.execVaultAccess ? "GRANTED" : "DENIED"}</span>
+                    )}
                   </div>
                 </div>
               </div>

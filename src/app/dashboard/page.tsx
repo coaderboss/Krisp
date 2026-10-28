@@ -820,76 +820,93 @@ export default function StudentDashboard() {
             {/* RIGHT SIDE: ANIMATED STATUS MAP */}
             <div className="md:col-span-7 space-y-6 order-1 md:order-2">
               <div className={`clay-card p-6 sm:p-10 text-center border-t-4 relative overflow-hidden ${
-                (!selectedForm.isMaster || data?.mainApp?.status === "WAITING") ? "border-t-amber-400" : "border-t-emerald-400"
+                (selectedForm.isMaster && data?.mainApp?.status === "WAITING") ? "border-t-amber-400" : "border-t-emerald-400"
               }`}>
                 <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full blur-3xl pointer-events-none ${
-                  (!selectedForm.isMaster || data?.mainApp?.status === "WAITING") ? "bg-amber-100/60" : "bg-emerald-100/60"
+                  (selectedForm.isMaster && data?.mainApp?.status === "WAITING") ? "bg-amber-100/60" : "bg-emerald-100/60"
                 }`}></div>
                 
                 <div className="relative z-10 space-y-8">
                   <div className="text-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 border border-slate-200 px-3 py-1 rounded-full">Live Tracker</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 border border-slate-200 px-3 py-1 rounded-full">{selectedForm.isMaster ? "Live Queue Tracker" : "Submission Status"}</span>
                     <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547] mt-4 mb-2">{selectedForm.title}</h2>
                   </div>
 
-                  {/* Gamified Progress Bar */}
-                  <div className="relative max-w-md mx-auto pt-4 pb-8">
-                     <div className="absolute top-1/2 left-0 w-full h-1.5 bg-slate-100 -translate-y-1/2 rounded-full z-0">
-                       <div className={`h-full rounded-full transition-all duration-1000 ease-in-out ${(!selectedForm.isMaster || data?.mainApp?.status === "WAITING") ? 'bg-amber-400 w-1/2' : 'bg-emerald-500 w-full'}`}></div>
-                     </div>
-                     
-                     <div className="flex justify-between relative z-10">
-                       <div className="flex flex-col items-center gap-2">
-                         <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg ring-4 ring-white"><CheckCircle className="w-5 h-5"/></div>
-                         <span className="text-[10px] font-black text-slate-700 uppercase">Submitted</span>
-                       </div>
-                       
-                       <div className="flex flex-col items-center gap-2">
-                         <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white transition-all duration-500 ${(!selectedForm.isMaster || data?.mainApp?.status === "WAITING") ? 'bg-amber-400 text-white scale-110 animate-pulse' : 'bg-emerald-500 text-white'}`}>
-                            {(!selectedForm.isMaster || data?.mainApp?.status === "WAITING") ? <Clock className="w-6 h-6"/> : <CheckCircle className="w-6 h-6"/>}
+                  {selectedForm.isMaster ? (
+                    // 🟢 MASTER / QUEUE FORM TRACKER
+                    <>
+                      {/* Gamified Progress Bar */}
+                      <div className="relative max-w-md mx-auto pt-4 pb-8">
+                         <div className="absolute top-1/2 left-0 w-full h-1.5 bg-slate-100 -translate-y-1/2 rounded-full z-0">
+                           <div className={`h-full rounded-full transition-all duration-1000 ease-in-out ${data?.mainApp?.status === "WAITING" ? 'bg-amber-400 w-1/2' : 'bg-emerald-500 w-full'}`}></div>
                          </div>
-                         <span className={`text-[10px] font-black uppercase ${(!selectedForm.isMaster || data?.mainApp?.status === "WAITING") ? 'text-amber-600' : 'text-slate-700'}`}>Review</span>
-                       </div>
+                         
+                         <div className="flex justify-between relative z-10">
+                           {/* Steps for Submitted, Review, Approved */}
+                           <div className="flex flex-col items-center gap-2">
+                             <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg ring-4 ring-white"><CheckCircle className="w-5 h-5"/></div>
+                             <span className="text-[10px] font-black text-slate-700 uppercase">Submitted</span>
+                           </div>
+                           
+                           <div className="flex flex-col items-center gap-2">
+                             <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white transition-all duration-500 ${data?.mainApp?.status === "WAITING" ? 'bg-amber-400 text-white scale-110 animate-pulse' : 'bg-emerald-500 text-white'}`}>
+                                {data?.mainApp?.status === "WAITING" ? <Clock className="w-6 h-6"/> : <CheckCircle className="w-6 h-6"/>}
+                             </div>
+                             <span className={`text-[10px] font-black uppercase ${data?.mainApp?.status === "WAITING" ? 'text-amber-600' : 'text-slate-700'}`}>Review</span>
+                           </div>
 
-                       <div className="flex flex-col items-center gap-2">
-                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ring-4 ring-white transition-all duration-500 ${(!selectedForm.isMaster || data?.mainApp?.status === "WAITING") ? 'bg-slate-100 text-slate-300' : 'bg-emerald-500 text-white shadow-lg scale-110'}`}>
-                           <Award className="w-5 h-5"/>
+                           <div className="flex flex-col items-center gap-2">
+                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ring-4 ring-white transition-all duration-500 ${data?.mainApp?.status === "WAITING" ? 'bg-slate-100 text-slate-300' : 'bg-emerald-500 text-white shadow-lg scale-110'}`}>
+                               <Award className="w-5 h-5"/>
+                             </div>
+                             <span className={`text-[10px] font-black uppercase ${data?.mainApp?.status === "WAITING" ? 'text-slate-400' : 'text-emerald-600'}`}>Approved</span>
+                           </div>
                          </div>
-                         <span className={`text-[10px] font-black uppercase ${(!selectedForm.isMaster || data?.mainApp?.status === "WAITING") ? 'text-slate-400' : 'text-emerald-600'}`}>Approved</span>
-                       </div>
-                     </div>
-                  </div>
+                      </div>
 
-                  {/* Context Message */}
-                  {(!selectedForm.isMaster || data?.mainApp?.status === "WAITING") ? (
-                    <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
-                      <p className="text-sm font-bold text-amber-800">Your application is in the queue.</p>
-                      <p className="text-xs text-amber-700/80 mt-1 font-medium">Admins are currently reviewing candidates. You will be notified once a slot is assigned.</p>
-                    </div>
+                      {data?.mainApp?.status === "WAITING" ? (
+                        <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
+                          <p className="text-sm font-bold text-amber-800">Your application is in the queue.</p>
+                          <p className="text-xs text-amber-700/80 mt-1 font-medium">Admins are currently reviewing candidates. You will be notified once a slot is assigned.</p>
+                        </div>
+                      ) : (
+                        <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                          <p className="text-sm font-bold text-emerald-800">Congratulations! You're shortlisted.</p>
+                          <p className="text-xs text-emerald-700/80 mt-1 font-medium">Check your email for the exact schedule and presentation details.</p>
+                        </div>
+                      )}
+
+                      {/* Nudge Control */}
+                      {data?.mainApp?.status === "WAITING" && (
+                        <div className="mt-8 pt-6 border-t border-slate-100">
+                          <button 
+                            onClick={handleNudge}
+                            disabled={data.mainApp.hasNudged || loading === "nudge"}
+                            className={`w-full sm:w-3/4 mx-auto py-4 rounded-xl text-sm font-extrabold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all ${
+                              data.mainApp.hasNudged 
+                              ? "bg-slate-50 text-amber-600 cursor-not-allowed border border-amber-100" 
+                              : "bg-gradient-to-r from-amber-400 to-amber-500 text-white hover:scale-105 hover:shadow-lg"
+                            }`}
+                          >
+                            <BellRing className={`w-5 h-5 ${!data.mainApp.hasNudged && "animate-bounce"}`} />
+                            {data.mainApp.hasNudged ? "Admin Notified Successfully" : "Nudge Admin Now"}
+                          </button>
+                        </div>
+                      )}
+                    </>
                   ) : (
-                    <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
-                      <p className="text-sm font-bold text-emerald-800">Congratulations! You're shortlisted.</p>
-                      <p className="text-xs text-emerald-700/80 mt-1 font-medium">Check your email for the exact schedule and presentation details.</p>
+                    // 🟢 NORMAL / EVENT FORM SUCCESS SCREEN (No Queue, No Nudge)
+                    <div className="flex flex-col items-center justify-center py-6 space-y-4">
+                       <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center shadow-inner border-4 border-white ring-4 ring-emerald-50">
+                         <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+                       </div>
+                       <div className="bg-emerald-50/80 p-5 rounded-2xl border border-emerald-100 max-w-sm mx-auto w-full mt-4">
+                         <p className="text-base font-extrabold text-emerald-900 mb-1">Response Recorded!</p>
+                         <p className="text-xs text-emerald-700 font-medium">Your submission has been securely encrypted and stored directly in the Data Vault. No further action is required.</p>
+                       </div>
                     </div>
                   )}
 
-                  {/* Nudge Control (Master Only & Only if Waiting) */}
-                  {selectedForm.isMaster && data?.mainApp?.status === "WAITING" && (
-                    <div className="mt-8 pt-6 border-t border-slate-100">
-                      <button 
-                        onClick={handleNudge}
-                        disabled={data.mainApp.hasNudged || loading === "nudge"}
-                        className={`w-full sm:w-3/4 mx-auto py-4 rounded-xl text-sm font-extrabold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all ${
-                          data.mainApp.hasNudged 
-                          ? "bg-slate-50 text-amber-600 cursor-not-allowed border border-amber-100" 
-                          : "bg-gradient-to-r from-amber-400 to-amber-500 text-white hover:scale-105 hover:shadow-lg"
-                        }`}
-                      >
-                        <BellRing className={`w-5 h-5 ${!data.mainApp.hasNudged && "animate-bounce"}`} />
-                        {data.mainApp.hasNudged ? "Admin Notified Successfully" : "Nudge Admin Now"}
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

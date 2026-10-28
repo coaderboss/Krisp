@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { getOrCreateCurrentSlot, runAutoQueue, toggleStudentSelection, updateApplicationStatus, fetchAllApplications, getGlobalMedia, updateGlobalMedia } from "@/actions/admin";
 import { submitReviewRequest } from "@/actions/requests";
 import { Video, Video as VideoIcon, RotateCcw, Send, Settings, Zap, ShieldAlert, CheckCircle,
-   Clock, UserPlus, UserMinus, Search, Layers, ChevronDown, Link as LinkIcon, MonitorPlay, Camera, Plus, Trash2, XCircle, PlaySquare, LayoutTemplate, Save } from "lucide-react";
+   Clock, UserPlus, UserMinus, Search, Layers, ChevronDown,Lock, Link as LinkIcon, MonitorPlay, Camera, Plus, Trash2, XCircle, PlaySquare, LayoutTemplate, Save } from "lucide-react";
 import SettingsTab from "@/components/admin/SettingsTab"; // 🟢 IMPORTED CLEAN COMPONENT
 
 export default function ExecutiveDashboard() {
@@ -242,13 +242,14 @@ export default function ExecutiveDashboard() {
                   <p className="text-xs text-slate-500 mt-1">Manage multiple URLs, control home page display limits, and preview live design.</p>
                </div>
                <div className="flex flex-wrap gap-3">
-                  <button onClick={() => setIsPreviewOpen(true)} className="clay-btn px-4 py-2.5 text-xs font-bold text-slate-700 flex items-center gap-2 bg-white hover:bg-slate-50 border-2 border-slate-200">
-                    <LayoutTemplate className="w-4 h-4 text-blue-500"/> Preview Design
-                  </button>
-                  <button onClick={() => setIsMediaManagerOpen(true)} className="clay-btn-primary px-5 py-2.5 text-xs font-extrabold flex items-center gap-2 shadow-lg hover:shadow-xl uppercase tracking-wider">
-                    <Settings className="w-4 h-4"/> Full Control
-                  </button>
-               </div>
+               <button onClick={() => setIsPreviewOpen(true)} className="clay-btn px-4 py-2.5 text-xs font-bold text-slate-700 flex items-center gap-2 bg-white hover:bg-slate-50 border-2 border-slate-200">
+                 <LayoutTemplate className="w-4 h-4 text-blue-500"/> Preview Design
+               </button>
+               {/* 🟢 FIX: Executive can only view, not manage Media. Ask Admin for changes. */}
+               <button onClick={() => alert("Media Engine management is restricted to the Supreme Admin. Please submit a review request for media changes.")} className="clay-btn px-5 py-2.5 text-xs font-extrabold flex items-center gap-2 shadow-sm uppercase tracking-wider bg-slate-200 text-slate-500 cursor-not-allowed">
+                 <Lock className="w-4 h-4"/> Admin Only
+               </button>
+            </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 relative z-10">
                <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 shadow-sm flex items-center gap-2">

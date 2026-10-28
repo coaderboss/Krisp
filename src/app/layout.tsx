@@ -5,14 +5,25 @@ import Navbar from "@/components/Navbar";
 import Providers from "@/components/Providers";
 import { auth } from "@/auth";
 import { connection } from "next/server";
+import PushSubscriber from "@/components/PushSubscriber";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains" });
 
 export const metadata: Metadata = {
-  title: "Cybersecurity Video Bulletin | CSJMU",
-  description: "Student Presenter Portal for Cybersecurity Club, UIET CSJM University Kanpur",
+  title: "Cybersecurity Club | UIET",
+  description: "Official Student Portal",
+  manifest: "/manifest.json", 
+  icons: {
+    icon: "/cyberpng.png",
+    apple: "/cyberpng.png",
+  },
+};
+
+// Next.js 14+ best practice for theme color
+export const viewport = {
+  themeColor: "#2563eb",
 };
 
 // --- FIX: Next.js ko allow karo ki auth fetch hone tak wait kare ---
@@ -35,6 +46,8 @@ export default async function RootLayout({
           <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 mt-4 sm:mt-8 overflow-x-clip">
             {children}
           </main>
+          {/* 🟢 FLOATING PUSH NOTIFICATION WIDGET (Only for authenticated users) */}
+          {session?.user && <PushSubscriber />}
         </Providers>
       </body>
     </html>
