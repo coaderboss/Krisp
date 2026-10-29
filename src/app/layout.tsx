@@ -16,8 +16,8 @@ export const metadata: Metadata = {
   description: "Official Student Portal",
   manifest: "/manifest.json", 
   icons: {
-    icon: "/cyberpng.png",
-    apple: "/cyberpng.png",
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
 };
 
