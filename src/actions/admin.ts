@@ -509,3 +509,44 @@ export async function getLiveAttendance(sessionId: string) {
   });
   return { success: true, data: records };
 }
+
+// 🟢 NEW API: Delete Calendar Event
+export async function deleteClubEvent(eventId: string) {
+  await requireSupremeAdmin(); // Ensure only authorized users can delete events
+  try {
+    await prisma.clubEvent.delete({
+      where: { id: eventId }
+    });
+    revalidatePath("/admin");
+    return { success: true, message: "Event removed from calendar." };
+  } catch (error) {
+    return { error: "Failed to delete event." };
+  }
+}
+
+// 🟢 FIXED API: Check Attendance Clearance via User Approval Status
+export async function checkAttendanceClearance() {
+  const sessionUser = await auth();
+  if (!sessionUser?.user?.id) return { status: "LOCKED" };
+  
+  // Supreme Admin always has access
+  if (sessionUser.user.role === "CLUB_ADMIN") return { status: "APPROVED" };
+
+  try {
+    // Check if the Executive account is fully approved by Admin
+    const user = await prisma.user.findUnique({
+      where: { id: sessionUser.user.id },
+      select: { isApproved: true }
+    });
+
+    if (user?.isApproved) {
+        return { status: "APPROVED" };
+    }
+    
+    // If not approved, they need to wait for Admin verification
+    return { status: "PENDING" }; 
+  } catch (error) {
+    console.error("Clearance check error:", error);
+    return { status: "LOCKED" };
+  }
+}

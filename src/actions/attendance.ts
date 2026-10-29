@@ -151,3 +151,60 @@ export async function getSessionRecords(sessionId: string) {
   });
   return { success: true, data: records };
 }
+
+// 🟢 NEW API: Delete Empty Attendance Session
+export async function deleteSession(sessionId: string) {
+  await requireAdminGuard();
+  try {
+    // Only allow deletion if there are zero records (empty session)
+    const session = await prisma.attendanceSession.findUnique({
+      where: { id: sessionId },
+      include: { _count: { select: { records: true } } }
+    });
+
+    if (!session) return { error: "Session not found." };
+    if (session._count.records > 0) return { error: "Cannot delete a session that has attendance records." };
+
+    await prisma.attendanceSession.delete({
+      where: { id: sessionId }
+    });
+    
+    revalidatePath("/admin");
+    return { success: true, message: "Empty session deleted permanently." };
+  } catch (error) {
+    return { error: "Failed to delete session." };
+  }
+}
+
+// 🟢 NEW API: Reactivate a stopped/expired session
+export async function reactivateSession(sessionId: string) {
+  await requireAdminGuard();
+  try {
+    // First, stop any currently active sessions so only one is live at a time
+    await prisma.attendanceSession.updateMany({ 
+      where: { isActive: true }, 
+      data: { isActive: false } 
+    });
+
+    // If it was a TIMER session, we need to extend the deadline (e.g., add 5 more minutes)
+    const session = await prisma.attendanceSession.findUnique({ where: { id: sessionId } });
+    if (!session) return { error: "Session not found." };
+
+    let newDeadline = session.deadline;
+    if (session.type === "TIMER") {
+       // Reset deadline to current time + 5 minutes
+       newDeadline = new Date(Date.now() + 5 * 60000);
+    }
+
+    // Now activate the targeted session
+    await prisma.attendanceSession.update({
+      where: { id: sessionId },
+      data: { isActive: true, deadline: newDeadline }
+    });
+
+    revalidatePath("/admin");
+    return { success: true, message: "Session reactivated successfully!" };
+  } catch (error) {
+    return { error: "Failed to reactivate session." };
+  }
+}

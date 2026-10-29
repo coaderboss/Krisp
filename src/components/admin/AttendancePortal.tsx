@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ScanLine, Clock, StopCircle, Users, CheckCircle2, Play, Database, ChevronLeft, History, Search, FileText, QrCode } from "lucide-react";
-import { createAttendanceSession, getLiveAdminSession, stopSession, getPastSessions, getSessionRecords } from "@/actions/attendance";
+import { ScanLine, Clock, StopCircle, Users, CheckCircle2, Play, Database, ChevronLeft, History, Search, FileText, QrCode, Trash2 } from "lucide-react";
+import { createAttendanceSession, getLiveAdminSession, stopSession, getPastSessions, getSessionRecords, deleteSession, reactivateSession } from "@/actions/attendance";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AttendancePortal({ onClose }: { onClose: () => void }) {
@@ -120,9 +120,28 @@ export default function AttendancePortal({ onClose }: { onClose: () => void }) {
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest bg-slate-200 text-slate-600 px-2.5 py-1 rounded-md mb-2 inline-block">Archived Session</span>
                 <h3 className="text-xl font-extrabold text-[#0F2547]">{viewingHistory.title}</h3>
-                <p className="text-xs font-bold text-slate-500 mt-1 flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5"/> Conducted on {new Date(viewingHistory.date).toLocaleString()}
-                </p>
+                <div className="flex items-center gap-4 mt-2">
+                  <p className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5"/> Conducted on {new Date(viewingHistory.date).toLocaleString()}
+                  </p>
+                  {/* Reactivate Button */}
+                  {!activeSession && (
+                     <button 
+                        onClick={async () => {
+                          if(confirm("Reactivate this session? It will become live again for students.")) {
+                            setLoading(true);
+                            await reactivateSession(viewingHistory.id);
+                            setViewingHistory(null);
+                            await fetchLiveSession();
+                            setLoading(false);
+                          }
+                        }}
+                        className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-md hover:bg-amber-100 transition-colors flex items-center gap-1"
+                     >
+                        <Play className="w-3 h-3" /> Reactivate Session
+                     </button>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -306,23 +325,43 @@ export default function AttendancePortal({ onClose }: { onClose: () => void }) {
                 </div>
               ) : (
                 filteredSessions.map(sess => (
-                  <button 
-                    key={sess.id} 
-                    onClick={() => openHistoryDetail(sess)}
-                    className="clay-card p-6 bg-white border border-slate-100 text-left hover:border-blue-300 hover:shadow-xl transition-all group flex flex-col justify-between h-full"
-                  >
-                    <div>
-                      <div className="flex justify-between items-start mb-4 border-b border-slate-100 pb-3">
-                        <span className="text-[9px] font-black uppercase text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md tracking-widest">{sess.mode}</span>
-                        <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3"/> {new Date(sess.date).toLocaleDateString()}</span>
+                  <div key={sess.id} className="relative group h-full">
+                    {/* Delete Empty Session Button */}
+                    {(sess._count?.records || 0) === 0 && (
+                      <button 
+                        onClick={async (e) => {
+                           e.stopPropagation();
+                           if(confirm("Delete this empty session permanently?")) {
+                             setLoading(true);
+                             await deleteSession(sess.id);
+                             await fetchHistory();
+                             setLoading(false);
+                           }
+                        }}
+                        className="absolute top-2 right-2 z-10 p-1.5 bg-red-50 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all shadow-sm"
+                        title="Delete empty session"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    <button 
+                      onClick={() => openHistoryDetail(sess)}
+                      className="w-full text-left clay-card p-6 bg-white border border-slate-100 hover:border-blue-300 hover:shadow-xl transition-all flex flex-col justify-between h-full"
+                    >
+                      <div>
+                        <div className="flex justify-between items-start mb-4 border-b border-slate-100 pb-3">
+                          <span className="text-[9px] font-black uppercase text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md tracking-widest">{sess.mode}</span>
+                          <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3"/> {new Date(sess.date).toLocaleDateString()}</span>
+                        </div>
+                        <h4 className="text-base font-extrabold text-[#0F2547] group-hover:text-blue-600 transition-colors leading-tight">{sess.title}</h4>
                       </div>
-                      <h4 className="text-base font-extrabold text-[#0F2547] group-hover:text-blue-600 transition-colors leading-tight">{sess.title}</h4>
-                    </div>
-                    <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-                       <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Users className="w-4 h-4 text-emerald-500"/> {sess._count?.records || 0} Attended</span>
-                       <span className="text-[10px] font-bold text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">View Data &rarr;</span>
-                    </div>
-                  </button>
+                      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                         <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5"><Users className="w-4 h-4 text-emerald-500"/> {sess._count?.records || 0} Attended</span>
+                         <span className="text-[10px] font-bold text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">View Data &rarr;</span>
+                      </div>
+                    </button>
+                  </div>
                 ))
               )}
             </div>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, FileText, Database, Calendar as CalendarIcon, Plus, ScanLine, Video, Send, Settings as SettingsIcon, ChevronLeft, ChevronRight, MapPin, Clock, ListPlus, ArrowRight } from "lucide-react";
-import { getOverviewMetrics, getClubEvents, createClubEvent } from "@/actions/admin";
+import { Users, FileText, Database, Calendar as CalendarIcon, Plus, ScanLine, Video, Send, Settings as SettingsIcon, ChevronLeft, ChevronRight, MapPin, Clock, ListPlus, ArrowRight, Trash2 } from "lucide-react";
+import { getOverviewMetrics, getClubEvents, createClubEvent, deleteClubEvent } from "@/actions/admin";
 import AttendancePortal from "./AttendancePortal";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,7 +19,7 @@ export default function OverviewTab({ navigateTo }: { navigateTo: (tab: any) => 
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   
   // Event Form State
-  const [newEvent, setNewEvent] = useState({ title: "", type: "WORKSHOP", time: "16:00" });
+  const [newEvent, setNewEvent] = useState({ title: "", type: "WORKSHOP", customType: "", time: "16:00" });
 
   useEffect(() => {
     loadDashboard();
@@ -48,15 +48,19 @@ export default function OverviewTab({ navigateTo }: { navigateTo: (tab: any) => 
 
   async function handleCreateEvent() {
     if (!newEvent.title) return alert("Please enter event title");
+    
+    // Agar type CUSTOM hai, toh customType ko use karo, warna default type
+    const finalType = newEvent.type === "CUSTOM" ? newEvent.customType.toUpperCase() : newEvent.type;
+    if (newEvent.type === "CUSTOM" && !finalType) return alert("Please specify custom category");
+
     setLoading(true);
     
-    // Combine selected date and time
     const [hours, minutes] = newEvent.time.split(":");
     const eventDateTime = new Date(currentYear, currentMonth, selectedDay || 1, parseInt(hours), parseInt(minutes));
     
-    await createClubEvent(newEvent.title, "", newEvent.type, eventDateTime);
+    await createClubEvent(newEvent.title, "", finalType, eventDateTime);
     
-    setNewEvent({ title: "", type: "WORKSHOP", time: "16:00" });
+    setNewEvent({ title: "", type: "WORKSHOP", customType: "", time: "16:00" });
     setIsAddingEvent(false);
     await loadDashboard();
   }
@@ -202,12 +206,23 @@ export default function OverviewTab({ navigateTo }: { navigateTo: (tab: any) => 
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-500 mb-1">Event Category</label>
-                          <select value={newEvent.type} onChange={e => setNewEvent({...newEvent, type: e.target.value})} className="clay-input w-full px-3 py-2 text-xs font-bold bg-white">
+                          <select value={newEvent.type} onChange={e => setNewEvent({...newEvent, type: e.target.value})} className="clay-input w-full px-3 py-2 text-xs font-bold bg-white mb-2">
                             <option value="WORKSHOP">Workshop Session</option>
                             <option value="MEETING">Team Meeting</option>
                             <option value="SHOOT">Video Shoot</option>
                             <option value="DEADLINE">Submission Deadline</option>
+                            <option value="CUSTOM">-- Custom Category --</option>
                           </select>
+                          {/* Custom input box */}
+                          {newEvent.type === "CUSTOM" && (
+                             <input 
+                               type="text" 
+                               value={newEvent.customType} 
+                               onChange={e => setNewEvent({...newEvent, customType: e.target.value})} 
+                               className="clay-input w-full px-3 py-2 text-xs font-bold border-amber-200 bg-amber-50" 
+                               placeholder="Enter custom category (e.g. HACKATHON)" 
+                             />
+                          )}
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-slate-500 mb-1">Time</label>
@@ -228,9 +243,23 @@ export default function OverviewTab({ navigateTo }: { navigateTo: (tab: any) => 
                           </div>
                         ) : (
                           eventsOnSelectedDate.map(ev => (
-                            <div key={ev.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl hover:border-amber-200 transition-colors group cursor-default">
+                            <div key={ev.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl hover:border-amber-200 transition-colors group relative">
+                              {/* Delete Event Button */}
+                              <button 
+                                onClick={async () => {
+                                  if(confirm("Remove this event from the calendar?")) {
+                                    setLoading(true);
+                                    await deleteClubEvent(ev.id);
+                                    await loadDashboard();
+                                  }
+                                }}
+                                className="absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-md opacity-0 group-hover:opacity-100 transition-all"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+
                               <span className="text-[8px] font-black uppercase text-amber-700 bg-amber-100 px-2 py-0.5 rounded tracking-widest">{ev.eventType}</span>
-                              <h5 className="font-extrabold text-sm text-[#0F2547] mt-1.5">{ev.title}</h5>
+                              <h5 className="font-extrabold text-sm text-[#0F2547] mt-1.5 pr-6">{ev.title}</h5>
                               <p className="text-[10px] font-bold text-slate-400 mt-1 flex items-center gap-1"><Clock className="w-3 h-3"/> {new Date(ev.eventDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                             </div>
                           ))
