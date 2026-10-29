@@ -19,16 +19,24 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// 3. SMART FETCH - "Network First, Fallback to Cache"
-// Hamesha live server se latest data layega, offline hone par cache use karega.
+// 3. SMART FETCH - "Network First, Fallback to Cache" (🟢 SECURED FOR APIS)
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  // SECURITY FIX: Never cache dynamic API routes, auth sessions, or TRPC endpoints
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/data/')) {
+      return; // Let the browser handle these normally, bypassing SW cache completely
+  }
 
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
         return caches.open(DYNAMIC_CACHE).then((cache) => {
-          cache.put(event.request, networkResponse.clone());
+          // Verify scheme is http/https before caching (prevents chrome-extension:// crash)
+          if (url.protocol === 'http:' || url.protocol === 'https:') {
+             cache.put(event.request, networkResponse.clone());
+          }
           return networkResponse;
         });
       })

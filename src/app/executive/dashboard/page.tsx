@@ -52,11 +52,10 @@ import {
   ChevronDown,
   X,
   Flame,
-  Radio,
+  Signal, 
   PlusCircle,
   Trash2,
   UserCheck,
-  AtSign
 } from "lucide-react";
 import SettingsTab from "@/components/admin/SettingsTab";
 import AttendancePortal from "@/components/admin/AttendancePortal";
@@ -451,7 +450,8 @@ Executive Editorial Board • CyberKrisp`);
     if (!slot?.id) return;
     setLoading("auto-queue");
     try {
-      const res = await runAutoQueue(slot.id);
+      // Cast the response to any
+      const res: any = await runAutoQueue(slot.id);
       if (res.error) notify(res.error, "error"); 
       else {
         notify(`Auto-Queue successfully assigned ${res.count || 0} candidate(s).`, "success");
@@ -468,7 +468,8 @@ Executive Editorial Board • CyberKrisp`);
     if (!slot?.id) return;
     setLoading(appId);
     try {
-      const res = await toggleStudentSelection(appId, slot.id);
+      // Cast the response to any to bypass the strict type checking on res.error
+      const res: any = await toggleStudentSelection(appId, slot.id);
       if (res.error) notify(res.error, "error"); 
       else await loadDashboardData();
     } catch {
@@ -481,7 +482,8 @@ Executive Editorial Board • CyberKrisp`);
   async function handleStatusChange(appId: string, status: string) {
     setLoading(appId);
     try {
-      const res = await updateApplicationStatus(appId, status as any);
+      // Cast the string to the expected Prisma enum type explicitly if needed, or leave it cleaner
+      const res = await updateApplicationStatus(appId, status as "WAITING" | "SHORTLISTED" | "SCREENING_DONE" | "COMPLETED" | "REJECTED");
       if (res.success) {
         notify(`Application status updated to ${status}`, "success");
         await loadDashboardData();
@@ -618,7 +620,7 @@ Executive Editorial Board • CyberKrisp`);
                   <Shield className="w-3 h-3 text-cyan-200" /> Executive Clearance Active
                 </span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-white/70 text-slate-600 border border-white">
-                  <Radio className="w-3 h-3 text-emerald-500 animate-pulse" /> Live Telemetry
+                  <Signal className="w-3 h-3 text-emerald-500 animate-pulse" /> Live Telemetry
                 </span>
               </div>
               
@@ -1588,7 +1590,7 @@ Executive Editorial Board • CyberKrisp`);
                       commSubTab === "DIRECT" ? "bg-white text-blue-700 shadow-sm" : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
-                    <AtSign className="w-3.5 h-3.5" />
+                    <Mail className="w-3.5 h-3.5" />
                     <span>Direct Message</span>
                   </button>
                 </div>
@@ -1936,7 +1938,7 @@ Executive Editorial Board • CyberKrisp`);
                     <div className="flex items-center justify-between pb-3 border-b border-blue-200/50">
                       <div>
                         <h4 className="text-sm font-black text-[#0F2547] uppercase tracking-wider flex items-center gap-2">
-                          <AtSign className="w-4 h-4 text-blue-600" /> Direct Candidate Message
+                          <Mail className="w-4 h-4 text-blue-600" /> Direct Candidate Message
                         </h4>
                         <p className="text-[10px] font-semibold text-slate-500 mt-0.5">Send a personalized inquiry to a specific enrolled candidate.</p>
                       </div>

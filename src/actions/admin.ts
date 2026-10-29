@@ -99,44 +99,47 @@ export async function runAutoQueue(slotId: string) {
   return { success: true, count: waitingApps.length };
 }
 
-// 3. Manual Pick / Remove Student
+// 3. Manual Pick / Remove Student (🟢 FIX: Transaction Safe & Race Condition Proof)
 export async function toggleStudentSelection(applicationId: string, slotId: string) {
   await requireAdmin();
 
   try {
-    const [app, slot] = await Promise.all([
-      prisma.application.findUnique({ where: { id: applicationId } }),
-      prisma.weeklySlot.findUnique({ where: { id: slotId } })
-    ]);
+    return await prisma.$transaction(async (tx) => {
+      const app = await tx.application.findUnique({ where: { id: applicationId } });
+      const slot = await tx.weeklySlot.findUnique({ where: { id: slotId } });
 
-    if (!app) return { error: "Application record could not be found." };
-    if (!slot) return { error: "Active weekly slot could not be found." };
+      if (!app) throw new Error("Application record could not be found.");
+      if (!slot) throw new Error("Active weekly slot could not be found.");
 
-    if (app.weeklySlotId === slotId) {
-      await prisma.application.update({
-        where: { id: applicationId },
-        data: { weeklySlotId: null, status: "WAITING" },
-      });
-      revalidatePath("/admin");
-      revalidatePath("/executive/dashboard");
-      return { success: true, message: "Slot allocation revoked." };
-    } else {
-      const count = await prisma.application.count({ where: { weeklySlotId: slotId } });
-      if (count >= 2) {
-        return { error: "This slot is already full (Maximum 2 presenters allowed)." };
+      if (app.weeklySlotId === slotId) {
+        await tx.application.update({
+          where: { id: applicationId },
+          data: { weeklySlotId: null, status: "WAITING" },
+        });
+        return { success: true, message: "Slot allocation revoked." };
+      } else {
+        const count = await tx.application.count({ where: { weeklySlotId: slotId } });
+        if (count >= 2) {
+          throw new Error("This slot is already full (Maximum 2 presenters allowed).");
+        }
+
+        await tx.application.update({
+          where: { id: applicationId },
+          data: { weeklySlotId: slotId, status: "SHORTLISTED" },
+        });
+        return { success: true, message: "Candidate successfully assigned to slot." };
       }
-
-      await prisma.application.update({
-        where: { id: applicationId },
-        data: { weeklySlotId: slotId, status: "SHORTLISTED" },
-      });
-      revalidatePath("/admin");
-      revalidatePath("/executive/dashboard");
-      return { success: true, message: "Candidate successfully assigned to slot." };
-    }
-  } catch (error) {
-    console.error("Toggle Selection Error:", error);
-    return { error: "Database error occurred during slot assignment." };
+    }, {
+      maxWait: 5000,
+      timeout: 10000,
+      isolationLevel: 'Serializable' // Prevents concurrent read-write conflicts
+    });
+  } catch (error: any) {
+    console.error("Toggle Selection Error:", error.message || error);
+    return { error: error.message || "Database error occurred during slot assignment." };
+  } finally {
+    revalidatePath("/admin");
+    revalidatePath("/executive/dashboard");
   }
 }
 
@@ -216,7 +219,7 @@ export async function updateSlotTheme(slotId: string, theme: string) {
 
 // 7. Dispatch Editable Screening Invites
 export async function sendInvitesToShortlisted(slotId: string, customHtmlTemplate: string) {
-  await requireSupremeAdmin(); // 🟢 SECURITY FIX: Lock official mass emailer to Supreme Admin only
+  await requireAdmin(); // 🟢 FIX: Allowed authorized Executives to use Editorial module
 
   const slot = await prisma.weeklySlot.findUnique({
     where: { id: slotId },
@@ -263,7 +266,7 @@ export async function sendInvitesToShortlisted(slotId: string, customHtmlTemplat
 
 // 8. Dispatch Mass Emails
 export async function sendMassEmails(recipients: { name: string; email: string }[], subject: string, customHtmlTemplate: string) {
-  await requireSupremeAdmin(); // 🟢 SECURITY FIX: Block Open Phishing Relays
+  await requireAdmin(); // 🟢 FIX: Authorized mass broadcast for Executive Editorial Team
 
   if (!recipients || recipients.length === 0) return { error: "No recipients provided." };
 
@@ -296,7 +299,7 @@ export async function sendMassEmails(recipients: { name: string; email: string }
 
 // 9. Dispatch Single Direct Email
 export async function sendDirectEmail(email: string, subject: string, htmlBody: string) {
-  await requireSupremeAdmin(); // 🟢 SECURITY FIX: Block Open Phishing Relays
+  await requireAdmin(); // 🟢 FIX: Authorized direct mail for Executive Editorial Team
 
   try {
     // FIX: Using global transporter to save server memory
@@ -319,13 +322,46 @@ export async function fetchAllApplications() {
     const masterFormConfig = await prisma.form.findFirst({ where: { isMaster: true } });
     const actualMasterId = masterFormConfig?.id || "master";
 
-    // Reverted to 'appliedAt' to match your Application model in schema.prisma
+    // 🟢 AUTO-HEALING PIPELINE FIX: 
+    // Agar form ko submissions aane ke baad "Plug" kiya gaya hai, 
+    // toh un stuck 'FormResponse' entries ko automatically active 'Application' pipeline me push karo.
+    if (masterFormConfig) {
+      const masterResponses = await prisma.formResponse.findMany({
+        where: { formId: actualMasterId }
+      });
+
+      for (const res of masterResponses) {
+        // Check karo ki kya yeh bacha already pipeline me aa chuka hai
+        const existingApp = await prisma.application.findFirst({
+          where: { userId: res.userId }
+        });
+
+        if (!existingApp) {
+          // Dynamic form se topic extract karo (ya form ka title use karo)
+          let parsed: any = {};
+          try { parsed = JSON.parse(res.answersData || "{}"); } catch(e) {}
+          const topic = parsed["Topic"] || parsed["Choose your preffered topic"] || masterFormConfig.title;
+
+          // Pipeline me naya record insert karo
+          await prisma.application.create({
+            data: {
+              userId: res.userId,
+              topicInterested: String(topic).substring(0, 190),
+              dynamicData: res.answersData,
+              status: "WAITING",
+              appliedAt: res.submittedAt
+            }
+          });
+        }
+      }
+    }
+
+    // Ab safely sabhi Applications (jisme ab naye sync hue records bhi hain) fetch karo
     const apps = await prisma.application.findMany({
       include: { user: true },
       orderBy: { appliedAt: "desc" } 
     });
 
-    // Reverted to 'submittedAt' to match your FormResponse model in schema.prisma
     const responses = await prisma.formResponse.findMany({
       include: { user: true, form: true },
       orderBy: { submittedAt: "desc" } 
@@ -336,7 +372,7 @@ export async function fetchAllApplications() {
     apps.forEach((app: any) => {
       unifiedData.push({
         ...app,
-        formId: actualMasterId, // This links the Application to the correct Vault Dropdown ID
+        formId: actualMasterId, // Dropdown ID ke liye link
         user: app.user, 
         topicInterested: app.topicInterested || "Not Selected",
         dynamicData: app.dynamicData || "{}",
