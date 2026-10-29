@@ -1,61 +1,90 @@
-// Install Event - Triggered when the service worker is installed
+const CACHE_NAME = "cyberkrisp-static-v1";
+const DYNAMIC_CACHE = "cyberkrisp-dynamic-v1";
+
+// 1. INSTALL EVENT - Skips waiting to force update immediately
 self.addEventListener("install", (event) => {
-  console.log("[Service Worker] Installed safely.");
-  self.skipWaiting(); // Force the waiting service worker to become the active service worker
+  self.skipWaiting();
 });
 
-// Activate Event
+// 2. ACTIVATE EVENT - Auto-cleans old caches when a new update arrives
 self.addEventListener("activate", (event) => {
-  console.log("[Service Worker] Activated.");
-  event.waitUntil(self.clients.claim()); // Take control of all pages immediately
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME && key !== DYNAMIC_CACHE)
+          .map((key) => caches.delete(key))
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
-// 🟢 THE PUSH EVENT: Catches the notification from the server
+// 3. SMART FETCH - "Network First, Fallback to Cache"
+// Hamesha live server se latest data layega, offline hone par cache use karega.
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+
+  event.respondWith(
+    fetch(event.request)
+      .then((networkResponse) => {
+        return caches.open(DYNAMIC_CACHE).then((cache) => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      })
+      .catch(() => caches.match(event.request))
+  );
+});
+
+// 4. ADVANCED PUSH EVENT - Handles rich media and interactions
 self.addEventListener("push", function (event) {
   if (!event.data) return;
 
   try {
     const data = event.data.json();
     
-    // Enterprise Configuration for OS-level Push
     const options = {
-      body: data.body || "You have a new update.",
-      icon: "/cyberpng.png", // Must be in public folder
-      badge: "/cyberpng.png", // Small monochrome icon for Android top bar
-      vibrate: [200, 100, 200, 100, 200], // Haptic feedback pattern
-      requireInteraction: data.requireInteraction || false, // If true, stays on screen until dismissed
-      data: {
-        url: data.url || "/dashboard", // Where to go when clicked
-      },
-      image: data.image || null, // For large banner images (Shortlisted congrats image etc)
+      body: data.body || "Portal update available.",
+      icon: "/cyberpng.png", 
+      badge: "/cyberpng.png", 
+      vibrate: [200, 100, 200, 100, 200],
+      requireInteraction: data.requireInteraction || false,
+      data: { url: data.url || "/" },
+      image: data.image || null,
     };
 
-    // Show the native notification
     event.waitUntil(
-      self.registration.showNotification(data.title || "Cybersecurity Club", options)
+      self.registration.showNotification(data.title || "Cyberkrisp Portal", options)
     );
   } catch (error) {
-    console.error("[Service Worker] Error parsing push payload:", error);
+    console.error("[SW] Push payload error:", error);
   }
 });
 
-// 🟢 THE NOTIFICATION CLICK EVENT: What happens when student taps the notification
+// 5. SECURE NOTIFICATION CLICK - Prevents Open-Redirect Attacks
 self.addEventListener("notificationclick", function (event) {
-  event.notification.close(); // Close the native pop-up
+  event.notification.close();
 
-  const targetUrl = event.notification.data.url;
+  let targetUrl = event.notification.data.url || "/";
+  
+  // Security Check: URL origin validate karo taaki phishing attack na ho
+  try {
+    const parsedUrl = new URL(targetUrl, self.location.origin);
+    if (parsedUrl.origin !== self.location.origin) {
+      targetUrl = self.location.origin + "/dashboard";
+    }
+  } catch (e) {
+    targetUrl = self.location.origin + "/dashboard";
+  }
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clientList) {
-      // 1. If the app is already open in the background, bring it to front and navigate
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
-        if (client.url && 'focus' in client) {
-          client.navigate(targetUrl);
+        if (client.url === targetUrl && "focus" in client) {
           return client.focus();
         }
       }
-      // 2. If the app is completely closed, open a new window/app instance
       if (clients.openWindow) {
         return clients.openWindow(targetUrl);
       }
