@@ -160,8 +160,13 @@ export default function SettingsTab() {
     setLoading("publish");
     const publishData = { ...activeForm, isActive: true };
     const res = await saveCompleteForm(activeForm.id, publishData, activeForm.questions || []);
-    if (res.success) { notify(res.message); setTimeout(() => window.location.reload(), 1500); }
-    else notify(res.error || "Failed", "error");
+    if (res.success) { 
+      notify(res.message || "Form published successfully!", "success");
+      const formsRes = await getAllFormsAdmin();
+      if (formsRes.success && formsRes.data) setForms(formsRes.data);
+    } else {
+      notify(res.error || "Failed to publish form", "error");
+    }
     setLoading("");
   };
 
@@ -182,8 +187,13 @@ export default function SettingsTab() {
     setLoading("publish");
     const reviewData = { ...activeForm, isActive: false };
     const res = await saveCompleteForm(activeForm.id, reviewData, activeForm.questions || []);
-    if (res.success) { notify("Submitted to Admin for review successfully!"); setTimeout(() => window.location.reload(), 1500); }
-    else notify(res.error || "Failed to submit for review", "error");
+    if (res.success) { 
+      notify("Submitted to Admin for review successfully!", "success");
+      const formsRes = await getAllFormsAdmin();
+      if (formsRes.success && formsRes.data) setForms(formsRes.data);
+    } else {
+      notify(res.error || "Failed to submit for review", "error");
+    }
     setLoading("");
   };
 
@@ -314,16 +324,37 @@ export default function SettingsTab() {
       )}
 
       {/* TOP NAVIGATION MODULE */}
-      <div className="flex bg-slate-100 p-1.5 rounded-2xl overflow-x-auto no-scrollbar shadow-inner gap-1">
-        <button onClick={() => setSettingsSubTab("BUILDER")} className={`flex-1 px-4 py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-2 transition-all ${settingsSubTab === "BUILDER" ? "bg-white shadow-sm text-blue-700" : "text-slate-500 hover:bg-slate-200/50"}`}>
-          <PenTool className="w-4 h-4" /> SPA Form Editor
+      <div className="clay-card p-1.5 rounded-2xl flex items-center overflow-x-auto no-scrollbar shadow-sm gap-1 border border-white">
+        <button 
+          onClick={() => setSettingsSubTab("BUILDER")} 
+          className={`flex-1 px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all shrink-0 ${
+            settingsSubTab === "BUILDER" 
+              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25" 
+              : "text-slate-600 hover:text-blue-700 hover:bg-white"
+          }`}
+        >
+          <PenTool className="w-3.5 h-3.5" /> <span>Form Engine Editor</span>
         </button>
-        <button onClick={() => setSettingsSubTab("PUBLISHED")} className={`flex-1 px-4 py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-2 transition-all ${settingsSubTab === "PUBLISHED" ? "bg-white shadow-sm text-emerald-600" : "text-slate-500 hover:bg-slate-200/50"}`}>
-          <FolderKanban className="w-4 h-4" /> Live Control
+        <button 
+          onClick={() => setSettingsSubTab("PUBLISHED")} 
+          className={`flex-1 px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all shrink-0 ${
+            settingsSubTab === "PUBLISHED" 
+              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25" 
+              : "text-slate-600 hover:text-emerald-700 hover:bg-white"
+          }`}
+        >
+          <FolderKanban className="w-3.5 h-3.5" /> <span>Live Intake Control</span>
         </button>
         {allowedVaultForms.length > 0 && (
-          <button onClick={() => setSettingsSubTab("RESPONSES")} className={`flex-1 px-4 py-2.5 text-xs font-extrabold rounded-xl flex items-center justify-center gap-2 transition-all ${settingsSubTab === "RESPONSES" ? "bg-white shadow-sm text-purple-600" : "text-slate-500 hover:bg-slate-200/50"}`}>
-            <Database className="w-4 h-4" /> Data Vault
+          <button 
+            onClick={() => setSettingsSubTab("RESPONSES")} 
+            className={`flex-1 px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all shrink-0 ${
+              settingsSubTab === "RESPONSES" 
+                ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/25" 
+                : "text-slate-600 hover:text-purple-700 hover:bg-white"
+            }`}
+          >
+            <Database className="w-3.5 h-3.5" /> <span>Submissions Vault</span>
           </button>
         )}
       </div>
