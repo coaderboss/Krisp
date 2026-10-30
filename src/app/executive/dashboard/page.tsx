@@ -8,6 +8,7 @@ import {
   updateApplicationStatus, 
   fetchAllApplications, 
   getGlobalMedia, 
+  getOverviewMetrics, // 🟢 FIX: Added missing import here
   getClubEvents, 
   checkAttendanceClearance,
   sendInvitesToShortlisted,
@@ -161,17 +162,30 @@ Executive Editorial Board • CyberKrisp`);
     try {
       await fetchClearance();
 
-      // Removed direct call to admin-restricted getOverviewMetrics.
-      // Set default zeroes, or replace with an authorized Executive endpoint if created later.
-      setMetrics({
-          activeForms: 0,
-          totalSubmissions: 0,
-          todayEvents: 0,
-          totalUsers: 0
-      });
+      // 🟢 FIX: Fetching actual metrics. Since requireAdmin now allows EXECUTIVES (updated in admin.ts), 
+      // this will fetch actual data without throwing unauthorized errors.
+      try {
+        const mRes: any = await getOverviewMetrics();
+        if (mRes.success && mRes.data) {
+          setMetrics({
+            activeForms: mRes.data.activeForms || 0,
+            totalSubmissions: mRes.data.totalSubmissions || 0,
+            todayEvents: mRes.data.todayEvents || 0,
+            totalUsers: mRes.data.totalUsers || 0
+          });
+        }
+      } catch (e) {
+        console.error("Metrics restricted:", e);
+      }
       
-      const eRes = await getClubEvents();
-      if (eRes.success) setEvents(eRes.data || []);
+      try {
+        const eRes: any = await getClubEvents();
+        if (eRes.success && eRes.data) {
+           setEvents(eRes.data);
+        }
+      } catch (e) {
+         console.error("Events fetch failed:", e);
+      }
 
       const slotData = await getOrCreateCurrentSlot();
       setSlot(slotData);

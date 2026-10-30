@@ -1,17 +1,62 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
-  BookOpen, BellRing, CheckCircle, Shield, ArrowRight, Loader2, Info, Ticket, Calendar as CalendarIcon, Activity,
-  ChevronLeft, Globe, ChevronRight, Award, FileText, CheckCircle2, AlertTriangle, CalendarDays, Lightbulb, MailWarning, Clock, Map as MapIcon, Play, MousePointerClick, Flag, Zap, Target, History as HistoryIcon, Terminal, Upload, ChevronDown, Lock, Server, Code, Eye, QrCode, ScanLine, KeyRound, Camera
+  BookOpen, 
+  BellRing, 
+  CheckCircle, 
+  Shield, 
+  ArrowRight, 
+  Loader2, 
+  Info, 
+  Ticket, 
+  Calendar as CalendarIcon, 
+  Activity,
+  ChevronLeft, 
+  Globe, 
+  ChevronRight, 
+  Award, 
+  FileText, 
+  CheckCircle2, 
+  AlertTriangle, 
+  CalendarDays, 
+  Lightbulb, 
+  MailWarning, 
+  Clock, 
+  Map as MapIcon, 
+  MapPin, 
+  Play, 
+  MousePointerClick, 
+  Flag, 
+  Zap, 
+  Target, 
+  History as HistoryIcon, 
+  Terminal, 
+  Upload, 
+  ChevronDown, 
+  Lock, 
+  Server, 
+  Code, 
+  Eye, 
+  QrCode, 
+  ScanLine, 
+  KeyRound, 
+  Camera,
+  LogOut,
+  Sparkles,
+  Layers,
+  Radio,
+  Compass,
+  Cpu,
+  EyeOff
 } from "lucide-react";
 import { getStudentDashboardData, submitStudentForm, nudgeAdmin, getStudentEvents } from "@/actions/student";
 import { getActiveSessionForStudent, markStudentAttendance } from "@/actions/attendance";
 import { signOut } from "next-auth/react";
-import { LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Html5Qrcode } from "html5-qrcode"; // 🟢 ADDED QR SCANNER LIBRARY
-// 🟢 SECURITY FIX: Robust Zero-Dependency Client-Side XSS Sanitizer
+import { Html5Qrcode } from "html5-qrcode";
+
+// 🟢 SECURITY: Robust Zero-Dependency Client-Side XSS Sanitizer
 const DOMPurify = {
   sanitize: (html: string) => {
     if (!html) return "";
@@ -34,6 +79,124 @@ const DOMPurify = {
   }
 }; 
 
+// Detailed 6-Phase Cybersecurity Pathway Data
+const cyberRoadmap = [
+  { 
+    step: 1, 
+    title: "Networking & Internet Architecture", 
+    icon: Globe, 
+    status: "completed", 
+    duration: "Weeks 1-4",
+    level: "Fundamental",
+    desc: "Understand how packets flow across the internet, protocol vulnerabilities, and packet inspection.", 
+    topics: [
+      "OSI & TCP/IP 4-Layer Architecture", 
+      "Subnetting, CIDR & NAT Traversal", 
+      "Deep Dive: DNS, HTTP/2, TLS 1.3 & SSH", 
+      "Wireshark & tcpdump Packet Analysis", 
+      "Routing Protocols: BGP, OSPF & ARP Spoofing"
+    ],
+    tools: ["Wireshark", "Nmap", "tcpdump", "Cisco Packet Tracer"],
+    milestone: "Packet Capture CTF: Extract credentials and secret keys from an unencrypted pcap stream.",
+    cert: "CompTIA Network+ / Cisco CCNA"
+  },
+  { 
+    step: 2, 
+    title: "Linux Mastery & System Internals", 
+    icon: Terminal, 
+    status: "completed", 
+    duration: "Weeks 5-8",
+    level: "Intermediate",
+    desc: "Master Unix command-line power, process manipulation, permissions, and shell automation.", 
+    topics: [
+      "Linux Filesystem (FHS) & /proc Virtual Filesystem", 
+      "Chmod, Chown, SUID/SGID & Sticky Bits", 
+      "Bash Automation & Python Scripting for Hackers", 
+      "Process Management, Daemons & Cron Jobs", 
+      "Log Auditing (/var/log/auth.log, syslog)"
+    ],
+    tools: ["Bash", "Tmux", "Strace", "Grep/Awk/Sed", "Vim"],
+    milestone: "Privilege Escalation Challenge: Exploit a misconfigured SUID binary to pop a root shell.",
+    cert: "RHCSA / LPIC-1"
+  },
+  { 
+    step: 3, 
+    title: "Web Vulnerabilities & Pentesting", 
+    icon: Shield, 
+    status: "current", 
+    duration: "Weeks 9-14",
+    level: "Advanced (Active)",
+    desc: "Audit and exploit OWASP Top 10 vulnerabilities in modern client-server web architectures.", 
+    topics: [
+      "SQL Injection (Union-based, Blind, Error-based)", 
+      "Cross-Site Scripting (Reflected, Stored, DOM XSS)", 
+      "Authentication Flaws, JWT Cracking & Session Hijacking", 
+      "SSRF, CSRF & Insecure Direct Object References (IDOR)", 
+      "Business Logic Flaws & Race Conditions"
+    ],
+    tools: ["Burp Suite Pro", "OWASP ZAP", "SQLmap", "Postman", "ffuf / Gobuster"],
+    milestone: "PortSwigger Web Security Academy: Complete 15 Practitioner-level vulnerability labs.",
+    cert: "PortSwigger BSCP / eWPTv2"
+  },
+  { 
+    step: 4, 
+    title: "Network Pentesting & Active Directory", 
+    icon: Target, 
+    status: "locked", 
+    duration: "Weeks 15-20",
+    level: "Expert",
+    desc: "Compromise enterprise networks, pivot through internal subnets, and dominate Active Directory domains.", 
+    topics: [
+      "Port Scanning & Enumeration with Nmap/Masscan", 
+      "Metasploit Framework & Custom Exploit Modification", 
+      "Active Directory: Kerberoasting & AS-REP Roasting", 
+      "Lateral Movement (Pass-the-Hash, PsExec, WMI)", 
+      "Windows Token Impersonation & Mimikatz Dumping"
+    ],
+    tools: ["BloodHound", "Impacket", "Mimikatz", "Metasploit", "Responder"],
+    milestone: "Hack The Box Pro Lab: Compromise an entire Active Directory domain forest from scratch.",
+    cert: "OffSec Certified Professional (OSCP) / CRTP"
+  },
+  { 
+    step: 5, 
+    title: "Cloud Security & DevSecOps", 
+    icon: Server, 
+    status: "locked", 
+    duration: "Weeks 21-26",
+    level: "Specialist",
+    desc: "Secure multi-cloud environments, audit IAM misconfigurations, container breakouts, and CI/CD security.", 
+    topics: [
+      "AWS & Azure IAM Privilege Escalation Chains", 
+      "S3 Bucket & Storage Account Exposure Enumeration", 
+      "Docker Container Escape & Kubernetes Pod Exploitation", 
+      "Infrastructure as Code (Terraform) Scanning", 
+      "CI/CD Pipeline Poisoning & Secrets Leakage Prevention"
+    ],
+    tools: ["ScoutSuite", "Trivy", "Pacu", "Kubectl", "GitGuardian"],
+    milestone: "CloudGoat Scenario: Exploit AWS IAM role assumption vulnerability to exfiltrate database records.",
+    cert: "AWS Certified Security Specialty / CKS"
+  },
+  { 
+    step: 6, 
+    title: "Bug Bounty & Zero-Day Research", 
+    icon: Award, 
+    status: "locked", 
+    duration: "Weeks 27-32",
+    level: "Mastery",
+    desc: "Hunt for vulnerabilities in live public programs, write triage reports, and earn ethical bounties.", 
+    topics: [
+      "Reconnaissance Automation at Scale (Amass, Subfinder)", 
+      "Content Discovery & JavaScript Endpoint Extraction", 
+      "Bypassing WAFs & Rate Limits with Custom Payloads", 
+      "Impact Demonstration & Professional CVSS Reporting", 
+      "Responsible Disclosure & Platform Triage Etiquette"
+    ],
+    tools: ["HackerOne", "Bugcrowd", "Nuclei", "httpx", "Sublist3r"],
+    milestone: "Submit 3 verified vulnerability reports on live HackerOne / Bugcrowd public programs.",
+    cert: "OffSec Web Expert (OSWE) / Hall of Fame"
+  }
+];
+
 export default function StudentDashboard() {
   const [loading, setLoading] = useState("init");
   const [data, setData] = useState<any>(null);
@@ -44,28 +207,65 @@ export default function StudentDashboard() {
   const [currentView, setCurrentView] = useState<"DASHBOARD" | "INSTRUCTIONS" | "FORM" | "STATUS" | "ACTIVITY_LOG" | "ROADMAP_DETAIL" | "ATTENDANCE">("DASHBOARD");
   const [selectedForm, setSelectedForm] = useState<any | null>(null);
   const [selectedRoadmapStep, setSelectedRoadmapStep] = useState<any | null>(null);
+  const [roadmapDetailTab, setRoadmapDetailTab] = useState<"CURRICULUM" | "TOOLS" | "MILESTONE" | "CERT">("CURRICULUM");
   const [declarationAccepted, setDeclarationAccepted] = useState(false);
-  
-  // 🟢 LOGIC FIX: Track selected files for dynamic UI feedback
   const [selectedFiles, setSelectedFiles] = useState<Record<string, string>>({});
 
-  // Attendance States (Frontend System)
+  // Attendance States
   const [attendanceCode, setAttendanceCode] = useState("");
   const [isScanning, setIsScanning] = useState(false);
-  const [attendances, setAttendances] = useState<any[]>([]); // Local state for optimistically recorded attendances
+  const [attendances, setAttendances] = useState<any[]>([]);
 
-  // Calendar Hover/Click State
-  const [selectedDate, setSelectedDate] = useState<number | null>(null);
-
-  // Calendar Logic
+  // Calendar Dynamic Navigation States (Executive 1:1 Design)
   const today = new Date();
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay();
-  const monthName = today.toLocaleString('default', { month: 'long' });
+  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
+  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate());
   
-  // 🟢 Real Data States
+  // Real Data States
   const [events, setEvents] = useState<any[]>([]);
   const [activeSession, setActiveSession] = useState<any>(null);
+
+  // Calendar Math
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const monthName = new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long' });
+
+  // Filter events on the specifically clicked day
+  const eventsOnSelectedDate = useMemo(() => {
+    if (!selectedDay) return [];
+    return events.filter(ev => {
+      const d = new Date(ev.eventDate);
+      return d.getDate() === selectedDay && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+  }, [events, selectedDay, currentMonth, currentYear]);
+
+  // Upcoming events in this month (to ensure agenda is NEVER an empty dead void)
+  const upcomingEventsThisMonth = useMemo(() => {
+    return events
+      .filter(ev => {
+        const d = new Date(ev.eventDate);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear && (!selectedDay || d.getDate() >= selectedDay);
+      })
+      .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
+      .slice(0, 5);
+  }, [events, currentMonth, currentYear, selectedDay]);
+
+  const changeMonth = (offset: number) => {
+    let newMonth = currentMonth + offset;
+    let newYear = currentYear;
+    if (newMonth < 0) { newMonth = 11; newYear--; }
+    else if (newMonth > 11) { newMonth = 0; newYear++; }
+    setCurrentMonth(newMonth);
+    setCurrentYear(newYear);
+    setSelectedDay(null);
+  };
+
+  const jumpToToday = () => {
+    setCurrentMonth(today.getMonth());
+    setCurrentYear(today.getFullYear());
+    setSelectedDay(today.getDate());
+  };
 
   // 🟢 CAMERA SCANNER EFFECT
   useEffect(() => {
@@ -75,7 +275,7 @@ export default function StudentDashboard() {
     if (isScanning && activeSession?.mode === "QR") {
       html5QrCode = new Html5Qrcode("qr-reader");
       html5QrCode.start(
-        { facingMode: "environment" }, // Use back camera
+        { facingMode: "environment" },
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
           if (isMounted) {
@@ -85,7 +285,7 @@ export default function StudentDashboard() {
             }).catch(console.error);
           }
         },
-        (errorMessage) => { /* Background scanning, ignore errors */ }
+        () => { /* Background scanning */ }
       ).catch((err) => {
          console.error("Camera Error:", err);
          if (isMounted) {
@@ -102,13 +302,6 @@ export default function StudentDashboard() {
       }
     };
   }, [isScanning, activeSession]);
-  const cyberRoadmap = [
-    { step: 1, title: "Networking Basics", icon: Globe, status: "completed", desc: "Understand how data travels across the internet.", topics: ["OSI & TCP/IP Models", "IP Addressing & Subnetting", "DNS, HTTP/HTTPS, FTP", "Wireshark Packet Analysis"] },
-    { step: 2, title: "Linux Fundamentals", icon: Terminal, status: "completed", desc: "Master the command line and OS internals.", topics: ["File System Hierarchy", "Permissions & Ownership", "Bash Scripting Basics", "Process Management & Cron"] },
-    { step: 3, title: "Web Vulnerabilities", icon: Shield, status: "current", desc: "Discover flaws in modern web applications.", topics: ["OWASP Top 10", "SQL Injection (SQLi)", "Cross-Site Scripting (XSS)", "CSRF & SSRF"] },
-    { step: 4, title: "Penetration Testing", icon: Target, status: "locked", desc: "Ethical hacking and systemic exploitation.", topics: ["Reconnaissance & Nmap", "Metasploit Framework", "Privilege Escalation", "Active Directory Basics"] },
-    { step: 5, title: "Bug Bounty", icon: Award, status: "locked", desc: "Hunt for bugs in the wild and earn rewards.", topics: ["Recon Automation", "Writing Proof of Concepts", "Bypassing WAFs", "Report Writing & Triage"] },
-  ];
 
   function notify(text: string, type: "success" | "error" = "success") {
     setMessage({ text, type });
@@ -116,27 +309,26 @@ export default function StudentDashboard() {
   }
 
   async function loadData() {
-    const res = await getStudentDashboardData();
-    if (res.success) {
-      setData({
-        activeForms: res.activeForms || [],
-        mainApp: res.mainApp || null,
-        otherResponses: res.otherResponses || []
-      });
-    }
+    try {
+      const res = await getStudentDashboardData();
+      if (res.success) {
+        setData({
+          activeForms: res.activeForms || [],
+          mainApp: res.mainApp || null,
+          otherResponses: res.otherResponses || []
+        });
+      }
 
-    // Fetch Calendar Events
-    const evRes = await getStudentEvents();
-    if (evRes.success) setEvents(evRes.data || []);
+      const evRes = await getStudentEvents();
+      if (evRes.success && evRes.data) setEvents(evRes.data);
 
-    // Fetch Live Attendance Session
-    const sessRes = await getActiveSessionForStudent();
-    if (sessRes.success && sessRes.data) {
-      setActiveSession(sessRes.data);
-    } else {
-      setActiveSession(null);
-    }
-    
+      const sessRes = await getActiveSessionForStudent();
+      if (sessRes.success && sessRes.data) {
+        setActiveSession(sessRes.data);
+      } else {
+        setActiveSession(null);
+      }
+    } catch {}
     setLoading("");
   }
 
@@ -171,7 +363,7 @@ export default function StudentDashboard() {
     setLoading("nudge");
     const res = await nudgeAdmin(data.mainApp.id);
     if (res.success) {
-      notify(res.message || "", "success");
+      notify(res.message || "Admin notified of pending review.", "success");
       setData({ ...data, mainApp: { ...data.mainApp, hasNudged: true } });
     } else {
       notify(res.error || "Something went wrong.", "error");
@@ -188,7 +380,6 @@ export default function StudentDashboard() {
     setSelectedForm(form);
     setDeclarationAccepted(false);
     
-    // 🟢 LOGIC FIX: Strict check for explicitly disabled instructions
     let skipInstructions = false;
     if (form.instructionText) {
       try {
@@ -220,7 +411,6 @@ export default function StudentDashboard() {
     setDeclarationAccepted(false);
   };
 
-  // 🟢 NEW: Parse Theme Data from the instruction JSON
   const getInstructionData = () => {
     if (!selectedForm?.instructionText) return { theme: "classic", blocks: [] };
     try {
@@ -232,7 +422,6 @@ export default function StudentDashboard() {
     }
   };
 
-  // 🟢 Real Secure Attendance Handler
   const handleMarkAttendance = async (qrData?: string) => {
     if (!activeSession) return notify("No active session running.", "error");
     
@@ -241,16 +430,15 @@ export default function StudentDashboard() {
       if (!attendanceCode.trim()) return notify("Please enter a valid code", "error");
       payload = attendanceCode.trim();
     } else {
-      payload = qrData || "simulated_qr_payload"; // Replace with actual QR data from a scanner library later
+      payload = qrData || "simulated_qr_payload";
     }
 
     setLoading("attendance");
     const res = await markStudentAttendance(activeSession.id, payload);
     
     if (res.success) {
-      // Optimistically add to local logs
       setAttendances([{ eventName: activeSession.title, date: new Date().toISOString() }, ...attendances]);
-      notify("Attendance Marked Successfully!", "success");
+      notify("Attendance Verified & Marked Successfully!", "success");
       setAttendanceCode("");
       setIsScanning(false);
       setCurrentView("ACTIVITY_LOG");
@@ -260,246 +448,473 @@ export default function StudentDashboard() {
     setLoading("");
   };
 
-  if (loading === "init") return <div className="flex flex-col justify-center h-screen items-center bg-slate-50"><Loader2 className="w-12 h-12 animate-spin text-blue-600 mb-4" /><p className="text-slate-500 font-bold uppercase tracking-widest text-xs animate-pulse">Loading Workspace</p></div>;
+  if (loading === "init") {
+    return (
+      <div className="flex flex-col justify-center h-screen items-center bg-[#EAF2FC]">
+        <div className="w-16 h-16 rounded-3xl clay-card flex items-center justify-center text-blue-600 mb-4 animate-pulse shadow-xl">
+          <Activity className="w-8 h-8" />
+        </div>
+        <p className="text-[#0F2547] font-black uppercase tracking-widest text-xs">Loading Student Portal</p>
+        <p className="text-slate-400 font-semibold text-[10px] mt-1">Connecting to Club Datastream &amp; Schedule Matrix...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in pb-20 overflow-x-hidden relative min-h-[85vh]">
+    <div className="w-full max-w-[1850px] mx-auto space-y-6 sm:space-y-8 animate-in fade-in pb-24 overflow-x-hidden relative min-h-[90vh]">
       
-      {/* NOTIFICATION BAR */}
-      {message && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[150] px-6 py-3 rounded-full text-xs sm:text-sm font-black text-center shadow-2xl transition-all duration-500 ease-in-out ${message.type === "success" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
-          {message.text}
-        </div>
-      )}
+      {/* FLOATING TOAST NOTIFICATION */}
+      <AnimatePresence>
+        {message && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-[150] max-w-lg w-[90%] px-4"
+          >
+            <div className={`p-4 rounded-2xl text-xs font-black shadow-xl border flex items-center justify-between gap-3 backdrop-blur-md ${
+              message.type === "success" 
+                ? "bg-emerald-500/95 text-white border-emerald-400 shadow-emerald-500/20" 
+                : "bg-red-500/95 text-white border-red-400 shadow-red-500/20"
+            }`}>
+              <div className="flex items-center gap-2">
+                {message.type === "success" ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+                <span>{message.text}</span>
+              </div>
+              <button onClick={() => setMessage(null)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
+                ✕
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* --- GLOBAL HEADER --- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4 pt-4 z-50">
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl clay-card flex items-center justify-center shrink-0 border-2 border-blue-100 bg-gradient-to-br from-white to-blue-50">
-            <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 drop-shadow-sm" />
+      {/* ========================================================= */}
+      {/* 1. SOFT CLAYMORPHIC GLOBAL HEADER BANNER                  */}
+      {/* ========================================================= */}
+      <div className="clay-card p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border border-white/80 shadow-md">
+        <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl clay-soft-blue flex items-center justify-center shrink-0 border border-white shadow-inner">
+            <Shield className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-3xl font-extrabold text-[#0F2547] tracking-tight">Student Event Hub</h1>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5 truncate">
-              {currentView === "DASHBOARD" ? "Discover, Apply, and Track your Journey" : 
-               currentView === "STATUS" ? `Application Status: ${selectedForm?.title}` : 
-               currentView === "ACTIVITY_LOG" ? "Detailed Activity History" : `Application Portal: ${selectedForm?.title || "Attendance"}`}
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="clay-badge-blue text-[9px] sm:text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
+                STUDENT HUB
+              </span>
+              <span className="flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Terminal Connected
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#0F2547] tracking-tight">
+              Cybersecurity Student Portal
+            </h1>
+            <p className="text-[11px] sm:text-xs text-slate-500 font-semibold truncate max-w-[260px] sm:max-w-md mt-0.5">
+              {currentView === "DASHBOARD" ? "Discover live sessions, active applications & structured skill roadmap" : 
+               currentView === "STATUS" ? `Tracking Application: ${selectedForm?.title}` : 
+               currentView === "ACTIVITY_LOG" ? "Verified Student Activity & Attendance History" : 
+               currentView === "ROADMAP_DETAIL" ? `Curriculum Deep Dive: ${selectedRoadmapStep?.title}` :
+               `Application Desk: ${selectedForm?.title || "Attendance"}`}
             </p>
           </div>
         </div>
 
-        {currentView === "DASHBOARD" ? (
-          <button 
-            onClick={() => signOut({ callbackUrl: "/login" })} 
-            className="clay-btn w-full sm:w-auto px-5 py-2.5 text-xs font-bold text-red-600 flex items-center justify-center gap-2 hover:bg-red-50 transition-colors shrink-0 shadow-sm"
-          >
-            <LogOut className="w-4 h-4" /> Secure Logout
-          </button>
-        ) : (
-          <button 
-            onClick={backToDashboard} 
-            className="clay-btn w-full sm:w-auto px-5 py-2.5 text-xs font-bold text-slate-600 flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors shrink-0 shadow-sm"
-          >
-            <ChevronLeft className="w-4 h-4" /> Back to Dashboard
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-start md:justify-end shrink-0">
+          {currentView === "DASHBOARD" ? (
+            <button 
+              onClick={() => signOut({ callbackUrl: "/login" })} 
+              className="clay-btn w-full sm:w-auto px-4 py-2.5 text-xs font-black text-red-600 hover:bg-red-50 flex items-center justify-center gap-2 shadow-sm border-red-100"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Secure Logout</span>
+            </button>
+          ) : (
+            <button 
+              onClick={backToDashboard} 
+              className="clay-btn-primary w-full sm:w-auto px-5 py-2.5 text-xs font-black flex items-center justify-center gap-2 shadow-md uppercase tracking-wider"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Return to Dashboard</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ========================================================= */}
-      {/* VIEW 1: MAIN DASHBOARD (LONG SCROLL)                      */}
+      {/* VIEW 1: MAIN STUDENT DASHBOARD (LONG-SCROLL MISSION DECK) */}
       {/* ========================================================= */}
       {currentView === "DASHBOARD" && (
-        <div className="space-y-10 animate-in slide-in-from-bottom-8 duration-500">
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
           
-          {/* SECTION 1: CALENDAR & ACTIVITY SUMMARY (Top Row) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-            {/* INTERACTIVE CALENDAR */}
-            <div className="lg:col-span-8 clay-card p-6 sm:p-8 space-y-6 relative overflow-hidden bg-gradient-to-br from-white to-slate-50">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/30 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/4"></div>
+          {/* ======================================================== */}
+          {/* DUAL OPERATIONAL DECK: CALENDAR MATRIX & ATTENDANCE      */}
+          {/* (1:1 Visual Alignment with Executive Dashboard UI)      */}
+          {/* ======================================================== */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            
+            {/* SMART SCHEDULE MATRIX & AGENDA (8 Cols) */}
+            <div className="lg:col-span-8 clay-card p-5 sm:p-6 flex flex-col md:flex-row gap-6 border border-white shadow-md">
               
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4 relative z-10">
-                <h3 className="text-lg sm:text-xl font-extrabold text-[#0F2547] flex items-center gap-2">
-                  <CalendarDays className="w-6 h-6 text-amber-500" /> Club Schedule
-                </h3>
-                <span className="text-xs text-blue-800 font-extrabold bg-blue-100 px-4 py-1.5 rounded-lg border border-blue-200 uppercase tracking-widest">{monthName} {today.getFullYear()}</span>
-              </div>
-              
-              <div className="flex flex-col md:flex-row gap-8 relative z-10">
-                {/* Calendar Grid */}
-                <div className="flex-1">
-                  <div className="grid grid-cols-7 gap-2 sm:gap-3 text-center">
-                    {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day, i) => (
-                      <div key={i} className="text-[9px] font-black text-slate-400 py-1 uppercase tracking-wider">{day}</div>
-                    ))}
-                    {Array.from({ length: firstDay }).map((_, i) => (
-                      <div key={`empty-${i}`} className="p-2"></div>
-                    ))}
-                    {Array.from({ length: daysInMonth }).map((_, i) => {
-                      const dayNum = i + 1;
-                      const isToday = dayNum === today.getDate();
-                      const isSelected = selectedDate === dayNum;
-                      
-                      const dayEvents = events.filter(ev => {
-                        const d = new Date(ev.eventDate);
-                        return d.getDate() === dayNum && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
-                      });
-                      const hasEvent = dayEvents.length > 0;
+              {/* Left Sub-Deck: Interactive Mini-Calendar (54%) */}
+              <div className="w-full md:w-[54%] flex flex-col border-b md:border-b-0 md:border-r border-blue-200/60 pb-5 md:pb-0 md:pr-6">
+                
+                {/* Month Navigation & Controls */}
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                      <CalendarIcon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-[#0F2547] uppercase tracking-wider">Schedule Matrix</h3>
+                      <p className="text-[9px] font-bold text-slate-400">Club Sessions &amp; Workshops</p>
+                    </div>
+                  </div>
 
-                      return (
-                        <div key={dayNum} className="flex justify-center">
-                          <button 
-                            onClick={() => setSelectedDate(dayNum)}
-                            className={`w-8 h-8 sm:w-10 sm:h-10 flex flex-col items-center justify-center rounded-xl text-xs font-bold transition-all relative
-                              ${isToday ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-200 ring-offset-2 scale-110 z-10' : 
-                                isSelected ? 'bg-slate-800 text-white shadow-md scale-105 z-10' : 
-                                'text-slate-600 hover:bg-slate-100 hover:scale-105'}
-                              ${hasEvent && !isToday && !isSelected ? 'border-2 border-amber-300 bg-amber-50 text-amber-800' : ''}
-                            `}
-                          >
-                            {dayNum}
-                            {hasEvent && <span className={`absolute bottom-1 w-1.5 h-1.5 rounded-full ${isToday || isSelected ? 'bg-white' : 'bg-amber-500'}`}></span>}
-                          </button>
+                  <div className="flex items-center gap-1.5 clay-inset px-2 py-1 rounded-xl">
+                    <button 
+                      onClick={() => changeMonth(-1)} 
+                      aria-label="Previous Month"
+                      className="p-1 hover:text-blue-600 text-slate-500 transition-colors"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#0F2547] min-w-[76px] text-center">
+                      {monthName.slice(0, 3)} {currentYear}
+                    </span>
+                    <button 
+                      onClick={() => changeMonth(1)} 
+                      aria-label="Next Month"
+                      className="p-1 hover:text-blue-600 text-slate-500 transition-colors"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                      onClick={jumpToToday} 
+                      className="ml-1 text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-white text-blue-600 border border-blue-100 hover:bg-blue-50"
+                    >
+                      Today
+                    </button>
+                  </div>
+                </div>
+
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
+                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d, i) => (
+                    <div key={i} className="text-[9px] font-black uppercase tracking-wider text-slate-400 py-1">{d}</div>
+                  ))}
+                </div>
+
+                {/* Day Grid */}
+                <div className="grid grid-cols-7 gap-1.5 flex-1 items-start">
+                  {Array.from({ length: firstDay }).map((_, i) => (
+                    <div key={`empty-${i}`} className="aspect-square opacity-0 pointer-events-none" />
+                  ))}
+
+                  {Array.from({ length: daysInMonth }).map((_, i) => {
+                    const dayNum = i + 1;
+                    const isCurrentDay = dayNum === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
+                    const isSelected = selectedDay === dayNum;
+                    
+                    const dayEvents = events.filter(ev => {
+                      const d = new Date(ev.eventDate);
+                      return d.getDate() === dayNum && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                    });
+                    
+                    const hasPublic = dayEvents.some(ev => ev.description !== 'INTERNAL');
+                    const hasInternal = dayEvents.some(ev => ev.description === 'INTERNAL');
+
+                    return (
+                      <button
+                        key={dayNum}
+                        onClick={() => setSelectedDay(dayNum)}
+                        className={`relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-bold transition-all ${
+                          isSelected
+                            ? "bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-105 z-10 font-black"
+                            : isCurrentDay
+                            ? "bg-white text-blue-600 border border-blue-300 font-black shadow-sm"
+                            : dayEvents.length > 0
+                            ? "bg-white/80 text-[#0F2547] hover:bg-white hover:shadow-sm"
+                            : "bg-transparent text-slate-500 hover:bg-white/60"
+                        }`}
+                      >
+                        <span>{dayNum}</span>
+                        
+                        {/* Event Indicator Dots */}
+                        <div className="absolute bottom-1 flex items-center gap-0.5">
+                          {hasPublic && (
+                            <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-cyan-200" : "bg-emerald-500"}`} />
+                          )}
+                          {hasInternal && (
+                            <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-amber-200" : "bg-amber-500"}`} />
+                          )}
                         </div>
-                      )
-                    })}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Calendar Legend */}
+                <div className="flex items-center gap-4 pt-3 mt-3 border-t border-slate-200/50 text-[10px] font-bold text-slate-500">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Public Meetup
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500"></span> Club Briefing
+                  </span>
+                </div>
+
+              </div>
+
+              {/* Right Sub-Deck: Smart Agenda (NEVER EMPTY) (46%) */}
+              <div className="w-full md:w-[46%] flex flex-col justify-between">
+                <div>
+                  {/* Header for Focus Day */}
+                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-blue-200/50">
+                    <div>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 block">Agenda Focus</span>
+                      <h4 className="text-sm font-extrabold text-[#0F2547]">
+                        {selectedDay ? `${selectedDay} ${monthName} ${currentYear}` : "Select a Date"}
+                      </h4>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-blue-50 text-blue-600 border border-blue-100">
+                      {eventsOnSelectedDate.length} {eventsOnSelectedDate.length === 1 ? "Session" : "Sessions"}
+                    </span>
+                  </div>
+
+                  {/* Event Cards or Smart Fallback (No empty void) */}
+                  <div className="space-y-2.5 max-h-[260px] overflow-y-auto no-scrollbar pr-1">
+                    {eventsOnSelectedDate.length > 0 ? (
+                      eventsOnSelectedDate.map((ev) => (
+                        <div 
+                          key={ev.id}
+                          className={`p-3.5 rounded-2xl border transition-all ${
+                            ev.description === "INTERNAL" 
+                              ? "bg-amber-50/70 border-amber-200 shadow-sm" 
+                              : "bg-white border-blue-100 shadow-[2px_4px_12px_rgba(15,37,71,0.04)]"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider ${
+                              ev.description === "INTERNAL" 
+                                ? "bg-amber-100 text-amber-800" 
+                                : "bg-emerald-100 text-emerald-800"
+                            }`}>
+                              {ev.eventType || "CLUB SESSION"}
+                            </span>
+                            
+                            {ev.description === "INTERNAL" && (
+                              <span title="Internal Club Briefing" className="text-amber-600">
+                                <EyeOff className="w-3.5 h-3.5" />
+                              </span>
+                            )}
+                          </div>
+
+                          <h5 className="text-xs font-black text-[#0F2547] leading-snug">{ev.title}</h5>
+                          
+                          <div className="flex items-center gap-3 text-[10px] font-semibold text-slate-500 mt-2">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              {new Date(ev.eventDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                            {ev.attendanceSession && (
+                              <span className="flex items-center gap-1 text-emerald-600 font-bold">
+                                <ScanLine className="w-3 h-3" /> Gate Attached
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      /* SMART UPCOMING ROSTER - PREVENTS EMPTY DEAD SPACE */
+                      <div className="space-y-3">
+                        <div className="p-3.5 rounded-2xl bg-white/70 border border-white text-center">
+                          <MapPin className="w-5 h-5 text-slate-400 mx-auto mb-1" />
+                          <p className="text-[11px] font-black text-slate-600">No sessions scheduled on this day</p>
+                          <p className="text-[9px] font-semibold text-slate-400 mt-0.5">Showing upcoming events for {monthName}:</p>
+                        </div>
+
+                        {upcomingEventsThisMonth.length > 0 ? (
+                          upcomingEventsThisMonth.map(ev => {
+                            const evDate = new Date(ev.eventDate);
+                            return (
+                              <div 
+                                key={ev.id}
+                                onClick={() => setSelectedDay(evDate.getDate())}
+                                className="p-3 rounded-xl bg-white/80 border border-blue-100/70 hover:bg-white hover:shadow-sm cursor-pointer transition-all flex items-center justify-between gap-3 group"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex flex-col items-center justify-center font-black leading-none border border-blue-100">
+                                    <span className="text-[11px]">{evDate.getDate()}</span>
+                                    <span className="text-[7px] uppercase">{evDate.toLocaleDateString("en-US", { month: "short" })}</span>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <h6 className="text-[11px] font-black text-[#0F2547] truncate group-hover:text-blue-600 transition-colors">{ev.title}</h6>
+                                    <span className="text-[9px] font-bold text-slate-400">{ev.eventType}</span>
+                                  </div>
+                                </div>
+                                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-[10px] font-bold text-center text-slate-400 py-3">No further events scheduled this month.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Event Details Panel */}
-                <div className="w-full md:w-64 shrink-0 flex flex-col">
-                   <h4 className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest border-b border-slate-200 pb-2">Event Details</h4>
-                   {selectedDate ? (
-                     (() => {
-                       const selectedDateEvents = events.filter(ev => {
-                         const d = new Date(ev.eventDate);
-                         return d.getDate() === selectedDate && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
-                       });
-
-                       return selectedDateEvents.length > 0 ? (
-                         <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-3">
-                           {selectedDateEvents.map((ev, idx) => (
-                             <div key={idx} className="animate-in fade-in slide-in-from-right-4 bg-amber-50/50 p-4 rounded-2xl border border-amber-100">
-                               <span className="text-[9px] font-black px-2 py-1 rounded bg-amber-200 text-amber-800 uppercase tracking-widest">{ev.eventType}</span>
-                               <h5 className="font-extrabold text-[#0F2547] text-sm leading-tight mt-2">{ev.title}</h5>
-                               <p className="text-[10px] text-slate-400 font-bold mt-2 pt-2 border-t border-amber-200/50 flex items-center gap-1"><Clock className="w-3 h-3"/> {new Date(ev.eventDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                             </div>
-                           ))}
-                         </div>
-                       ) : (
-                         <div className="flex-1 flex flex-col items-center justify-center text-center p-4 border-2 border-dashed border-slate-200 rounded-2xl animate-in fade-in">
-                           <CalendarIcon className="w-8 h-8 text-slate-300 mb-2"/>
-                           <p className="text-xs font-bold text-slate-500">No events scheduled for {monthName} {selectedDate}.</p>
-                         </div>
-                       )
-                     })()
-                   ) : (
-                     <div className="flex-1 flex flex-col items-center justify-center text-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                       <MousePointerClick className="w-8 h-8 text-blue-300 mb-2 animate-bounce"/>
-                       <p className="text-xs font-bold text-slate-500">Click a highlighted date to view details.</p>
-                     </div>
-                   )}
+                {/* Bottom Quick-Tip */}
+                <div className="pt-3 mt-2 border-t border-blue-200/40 text-[9px] font-bold text-slate-400 flex items-center justify-between">
+                  <span>Total Month Load: {events.length} Event(s)</span>
+                  <span className="text-blue-600 font-extrabold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Live Roster Active
+                  </span>
                 </div>
               </div>
+
             </div>
 
-            {/* QUICK ACTIVITY LOG (Widget) */}
-            <div className="lg:col-span-4 clay-card p-6 sm:p-8 space-y-5 flex flex-col">
-              <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
-                <h3 className="text-lg font-extrabold text-[#0F2547] flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-emerald-500" /> Recent Activity
+            {/* EVENT ATTENDANCE TERMINAL GATEWAY (4 Cols) */}
+            <div className="lg:col-span-4 clay-card p-6 flex flex-col justify-between relative overflow-hidden group border border-white shadow-md">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-inner ${
+                    activeSession 
+                      ? "bg-purple-100 text-purple-700 border-purple-200 animate-pulse" 
+                      : "bg-blue-100 text-blue-600 border-blue-200"
+                  }`}>
+                    <ScanLine className="w-6 h-6" />
+                  </div>
+
+                  <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                    activeSession 
+                      ? "bg-purple-50 text-purple-700 border-purple-200" 
+                      : "bg-blue-50 text-blue-600 border-blue-200"
+                  }`}>
+                    {activeSession ? "SESSION STREAMING" : "TERMINAL IDLE"}
+                  </span>
+                </div>
+
+                <h3 className="text-lg font-black text-[#0F2547] leading-snug">
+                  Event Attendance Terminal
                 </h3>
-                <button onClick={() => setCurrentView("ACTIVITY_LOG")} className="text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">View All</button>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
-                {attendances.map((att, idx) => (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ type: "spring", stiffness: 200, damping: 15, delay: idx * 0.1 }} key={`q-att-${idx}`} className="p-4 rounded-xl border border-purple-100 bg-purple-50 flex items-start gap-3 hover:bg-purple-100 transition-colors cursor-default">
-                    <ScanLine className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-xs font-bold text-[#0F2547] leading-tight">{att.eventName}</h4>
-                      <p className="text-[9px] text-purple-600 font-bold uppercase mt-1">Attendance Marked</p>
-                    </div>
-                  </motion.div>
-                ))}
-                {data?.mainApp && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ type: "spring", stiffness: 200, damping: 15 }} className="clay-inset p-4 rounded-xl border-l-4 border-l-amber-400 bg-white">
-                     <div className="flex justify-between items-center mb-1">
-                        <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest bg-amber-50 px-2 py-0.5 rounded border border-amber-100">Core Team</span>
-                     </div>
-                     <h4 className="text-xs font-extrabold text-[#0F2547] truncate">{data.mainApp.topicInterested}</h4>
-                     <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase flex items-center gap-1">Status: <span className={`px-1.5 py-0.5 rounded ${data.mainApp.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-blue-600'}`}>{data.mainApp.status}</span></p>
-                  </motion.div>
-                )}
-                {data?.otherResponses?.slice(0,3).map((res: any, idx: number) => (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ type: "spring", stiffness: 200, damping: 15, delay: (idx + 1) * 0.1 }} key={res.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50 flex items-start gap-3 hover:bg-slate-100 transition-colors">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-xs font-bold text-[#0F2547] leading-tight">{res.form?.title || "Unknown Event"}</h4>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase mt-1">Recorded Successfully</p>
-                    </div>
-                  </motion.div>
-                ))}
-                {!data?.mainApp && (!data?.otherResponses || data?.otherResponses.length === 0) && attendances.length === 0 && (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400 py-6">
-                    <HistoryIcon className="w-8 h-8 mb-2 opacity-50"/>
-                    <p className="text-xs font-bold">No activity yet.</p>
+                <p className="text-xs font-semibold text-slate-500 mt-1.5 leading-relaxed">
+                  {activeSession
+                    ? `Live check-in is active for "${activeSession.title}". Scan QR or enter session PIN to record presence.`
+                    : "No live attendance broadcast currently active. Terminal will activate automatically when coordinators initiate check-in."}
+                </p>
+
+                {/* Diagnostics Box */}
+                <div className="mt-4 p-3.5 rounded-2xl bg-white/70 border border-white space-y-2 text-[10px] font-bold">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Scanner Engine:</span>
+                    <span className="text-[#0F2547]">Dual-Key QR + 6-Char PIN</span>
                   </div>
-                )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Security Clearance:</span>
+                    <span className="text-emerald-600 font-black">Student Verified</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Live Broadcast:</span>
+                    <span className={activeSession ? "text-purple-700 font-black" : "text-slate-500"}>
+                      {activeSession ? activeSession.mode : "Awaiting Host"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Launch Button */}
+              <div className="pt-5 mt-4 border-t border-blue-200/60">
+                <button
+                  onClick={() => setCurrentView("ATTENDANCE")}
+                  className="w-full clay-btn-primary py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 hover:shadow-lg transition-all"
+                >
+                  <QrCode className="w-4 h-4" />
+                  <span>Open Scanner Terminal</span>
+                  <ArrowRight className="w-4 h-4 ml-auto" />
+                </button>
               </div>
             </div>
+
           </div>
 
-          {/* SECTION 2: LIVE FORMS (Horizontal / Grid layout depending on count) */}
-          <div className="space-y-6 pt-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547] flex items-center gap-2">
-                <Ticket className="w-6 h-6 text-blue-600" /> Active Applications
-              </h2>
-              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">{data?.activeForms?.length || 0} Available</span>
+          {/* ======================================================== */}
+          {/* SECTION 2: ACTIVE APPLICATIONS & EVENT INTAKES          */}
+          {/* ======================================================== */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-blue-200/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                  <Ticket className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-black text-[#0F2547]">Active Applications &amp; Registrations</h2>
+                  <p className="text-[10px] font-bold text-slate-400">Apply for upcoming cyber bulletins, club presenter slots, and workshops.</p>
+                </div>
+              </div>
+              <span className="clay-badge-blue text-[10px] font-black px-3 py-1 rounded-full uppercase">
+                {data?.activeForms?.length || 0} Open Forms
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {data?.activeForms?.map((form: any) => {
                 if (!form?.id) return null;
                 const submitted = hasSubmittedForm(form.id, form.isMaster);
                 
                 return (
                   <motion.div 
-                    whileHover={{ y: -5 }} 
+                    whileHover={{ y: -3 }} 
                     key={form.id} 
-                    className={`clay-card p-6 sm:p-8 flex flex-col justify-between h-full relative overflow-hidden transition-shadow duration-300 hover:shadow-2xl ${submitted ? "border-2 border-emerald-200 bg-emerald-50/10" : "bg-white"}`}
+                    className={`clay-card p-6 flex flex-col justify-between h-full relative overflow-hidden transition-all border ${
+                      submitted ? "border-emerald-200 bg-emerald-50/20" : "border-white bg-white/90"
+                    }`}
                   >
-                    {form.isMaster && !submitted && <div className="absolute -top-10 -right-10 w-48 h-48 bg-amber-100/40 rounded-full blur-[40px] pointer-events-none"></div>}
-                    {submitted && <div className="absolute -top-10 -right-10 w-48 h-48 bg-emerald-100/40 rounded-full blur-[40px] pointer-events-none"></div>}
-
                     <div className="relative z-10 flex flex-col h-full">
-                      <div className="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
-                        <span className={`text-[9px] font-black px-3 py-1.5 rounded-md uppercase tracking-widest shadow-sm border ${form.formMode === "QUEUE" ? "bg-amber-100 text-amber-800 border-amber-200" : form.formMode === "NORMAL" ? "bg-purple-100 text-purple-800 border-purple-200" : "bg-blue-100 text-blue-800 border-blue-200"}`}>
-                          {/* 🟢 LOGIC FIX: Dynamic form badges based on actual database mode */}
+                      <div className="flex justify-between items-start mb-4 border-b border-slate-100 pb-3">
+                        <span className={`text-[9px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider border ${
+                          form.formMode === "QUEUE" ? "bg-amber-100 text-amber-900 border-amber-200" : 
+                          form.formMode === "NORMAL" ? "bg-purple-100 text-purple-900 border-purple-200" : 
+                          "bg-blue-100 text-blue-900 border-blue-200"
+                        }`}>
                           {form.formMode === "QUEUE" ? "⭐ CORE SELECTION" : form.formMode === "NORMAL" ? "📄 STANDARD FORM" : "📅 EVENT FORM"}
                         </span>
-                        {submitted && <span className="flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-100 px-3 py-1.5 rounded-md border border-emerald-200 uppercase tracking-widest"><CheckCircle2 className="w-3.5 h-3.5" /> Secured</span>}
+                        
+                        {submitted && (
+                          <span className="flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md border border-emerald-200 uppercase tracking-wider">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Secured in Vault
+                          </span>
+                        )}
                       </div>
                       
-                      <div className="flex-1 space-y-3 mb-8">
-                        <h3 className={`text-xl sm:text-2xl font-black leading-tight ${submitted ? "text-emerald-950" : "text-[#0F2547]"}`}>{form.title}</h3>
-                        <p className="text-sm text-slate-500 leading-relaxed font-medium line-clamp-3">{form.description}</p>
+                      <div className="flex-1 space-y-2 mb-6">
+                        <h3 className={`text-lg sm:text-xl font-black leading-snug ${submitted ? "text-emerald-950" : "text-[#0F2547]"}`}>
+                          {form.title}
+                        </h3>
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium line-clamp-3">
+                          {form.description}
+                        </p>
                       </div>
                     
-                      <div className="mt-auto">
+                      <div className="mt-auto pt-3 border-t border-slate-100">
                         {submitted ? (
                           <button 
                             onClick={() => handleStatusClick(form)}
-                            className="w-full py-4 rounded-xl text-sm font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 shadow-sm transition-all bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:shadow-md border border-emerald-200"
+                            className="w-full clay-btn py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-emerald-50 text-emerald-800 transition-all border-emerald-200"
                           >
-                            <MapIcon className="w-5 h-5" /> Track Live Status
+                            <MapIcon className="w-4 h-4 text-emerald-600" />
+                            <span>Track Live Status</span>
+                            <ArrowRight className="w-3.5 h-3.5 ml-auto text-emerald-600" />
                           </button>
                         ) : (
                           <button 
                             onClick={() => handleApplyClick(form)}
-                            className="w-full py-4 rounded-xl text-sm font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg transition-transform bg-blue-600 text-white hover:bg-blue-700"
+                            className="w-full clay-btn-primary py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all"
                           >
-                            Apply Now <ArrowRight className="w-5 h-5" />
+                            <span>Apply Now</span>
+                            <ArrowRight className="w-4 h-4 ml-auto" />
                           </button>
                         )}
                       </div>
@@ -509,307 +924,416 @@ export default function StudentDashboard() {
               })}
               
               {(!data?.activeForms || data.activeForms.length === 0) && (
-                <div className="col-span-full clay-inset p-12 text-center text-slate-500 flex flex-col items-center rounded-3xl">
-                  <Ticket className="w-12 h-12 text-slate-300 mb-4" />
-                  <p className="font-extrabold text-lg text-slate-600">No Active Forms</p>
-                  <p className="text-xs font-medium mt-1">Check back later for new events and applications.</p>
+                <div className="col-span-full clay-inset p-10 text-center text-slate-500 flex flex-col items-center rounded-3xl">
+                  <Ticket className="w-10 h-10 text-slate-300 mb-3" />
+                  <p className="font-black text-base text-[#0F2547]">No Active Registration Forms</p>
+                  <p className="text-xs font-medium text-slate-400 mt-0.5">Please check back later for upcoming club presenter slots &amp; workshop intakes.</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* SECTION 2.5: ATTENDANCE MODULE */}
-          <div className="space-y-6 pt-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-              <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547] flex items-center gap-2">
-                <ScanLine className="w-6 h-6 text-purple-600" /> Event Attendance
-              </h2>
-            </div>
-            <motion.div 
-              whileHover={{ y: -5 }}
-              onClick={() => setCurrentView("ATTENDANCE")}
-              className="clay-card p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 cursor-pointer group hover:shadow-2xl transition-all border-2 border-purple-100 bg-gradient-to-r from-purple-50/40 to-white overflow-hidden relative"
-            >
-              <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-purple-200/40 rounded-full blur-[40px] pointer-events-none group-hover:bg-purple-300/50 transition-colors"></div>
-              <div className="flex items-center gap-5 relative z-10">
-                <div className="w-16 h-16 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
-                  <QrCode className="w-8 h-8" />
+          {/* ======================================================== */}
+          {/* SECTION 3: RECENT STUDENT ACTIVITY & TELEMETRY STREAM   */}
+          {/* ======================================================== */}
+          <div className="clay-card p-5 sm:p-6 space-y-4 border border-white shadow-md">
+            <div className="flex items-center justify-between pb-3 border-b border-blue-200/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Activity className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-extrabold text-[#0F2547] mb-1">Mark Your Attendance</h3>
-                  <p className="text-sm text-slate-500 font-medium">Scan QR or enter secret code to log your presence instantly.</p>
+                  <h3 className="text-sm font-black text-[#0F2547] uppercase tracking-wider">Your Recent Activity Stream</h3>
+                  <p className="text-[10px] font-bold text-slate-400">Real-time confirmation of your attendances and application submissions.</p>
                 </div>
               </div>
-              <div className="relative z-10 w-full sm:w-auto">
-                <button className="w-full sm:w-auto clay-btn-primary bg-purple-600 hover:bg-purple-700 text-white px-8 py-3.5 rounded-xl text-sm font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg transition-transform group-hover:scale-105 border-purple-500">
-                  Open Scanner <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
+              <button 
+                onClick={() => setCurrentView("ACTIVITY_LOG")} 
+                className="clay-btn px-3 py-1.5 text-[10px] font-black uppercase text-blue-700 hover:text-blue-800"
+              >
+                View Full Timeline
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {/* Card 1: Attendance Logs */}
+              {attendances.length > 0 ? (
+                attendances.slice(0, 1).map((att, idx) => (
+                  <div key={idx} className="clay-inset p-3.5 rounded-2xl flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                      <ScanLine className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[8px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-2 py-0.5 rounded">Attendance Logged</span>
+                      <h5 className="text-xs font-black text-[#0F2547] truncate mt-0.5">{att.eventName}</h5>
+                      <p className="text-[9px] font-semibold text-slate-400">Verified via cryptographic protocol</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="clay-inset p-3.5 rounded-2xl flex items-center gap-3 text-slate-400">
+                  <ScanLine className="w-5 h-5 opacity-40 shrink-0" />
+                  <span className="text-xs font-semibold">No recent attendance sessions logged</span>
+                </div>
+              )}
+
+              {/* Card 2: Core Team Application Status */}
+              {data?.mainApp ? (
+                <div className="clay-inset p-3.5 rounded-2xl flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[8px] font-black uppercase tracking-wider text-amber-800 bg-amber-50 px-2 py-0.5 rounded">Core Presenter Queue</span>
+                    <h5 className="text-xs font-black text-[#0F2547] truncate mt-0.5">{data.mainApp.topicInterested}</h5>
+                    <p className="text-[9px] font-semibold text-slate-500">Status: <strong className="text-blue-700">{data.mainApp.status}</strong></p>
+                  </div>
+                </div>
+              ) : (
+                <div className="clay-inset p-3.5 rounded-2xl flex items-center gap-3 text-slate-400">
+                  <Award className="w-5 h-5 opacity-40 shrink-0" />
+                  <span className="text-xs font-semibold">Not enrolled in Weekly Presenter Queue</span>
+                </div>
+              )}
+
+              {/* Card 3: Other Responses */}
+              {data?.otherResponses && data.otherResponses.length > 0 ? (
+                <div className="clay-inset p-3.5 rounded-2xl flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[8px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded">Form Submission</span>
+                    <h5 className="text-xs font-black text-[#0F2547] truncate mt-0.5">{data.otherResponses[0].form?.title || "Active Intake"}</h5>
+                    <p className="text-[9px] font-semibold text-emerald-600">Encrypted in Vault</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="clay-inset p-3.5 rounded-2xl flex items-center gap-3 text-slate-400">
+                  <FileText className="w-5 h-5 opacity-40 shrink-0" />
+                  <span className="text-xs font-semibold">No recent event submissions</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* SECTION 3: CYBERSECURITY ROADMAP (Visual Pathway) */}
-          <div className="clay-card p-6 sm:p-10 space-y-8 bg-slate-900 border-none relative overflow-hidden">
-             <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
-             
-             <div className="text-center relative z-10">
-               <span className="text-[10px] font-black uppercase text-emerald-400 tracking-widest border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 rounded-full inline-block mb-3">Learning Path</span>
-               <h2 className="text-2xl sm:text-3xl font-black text-black">Cybersecurity Roadmap</h2>
-               <p className="text-sm text-slate-400 mt-2 max-w-xl mx-auto">Follow this structured path to master cybersecurity concepts. Click any phase for deep analysis.</p>
-             </div>
-
-             <div className="relative z-10 max-w-4xl mx-auto py-8">
-                {/* Connecting Line */}
-                <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-800 -translate-y-1/2 rounded-full hidden md:block">
-                  <div className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full transition-all duration-1000" style={{ width: '50%' }}></div>
+          {/* ======================================================== */}
+          {/* SECTION 4: EXPEDITION CYBERSECURITY ROADMAP             */}
+          {/* (Deep Visual Pathway with Framer Motion Interactions)    */}
+          {/* ======================================================== */}
+          <div className="clay-card p-6 sm:p-8 space-y-6 border border-white shadow-md relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-blue-200/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-md">
+                  <Compass className="w-5 h-5" />
                 </div>
-
-                <div className="flex flex-col md:flex-row justify-between items-center gap-8 md:gap-0 relative">
-                  {cyberRoadmap.map((step, idx) => {
-                    const Icon = step.icon;
-                    return (
-                      <motion.div 
-                        key={idx} 
-                        whileHover={{ y: -5, scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => { setSelectedRoadmapStep(step); setCurrentView("ROADMAP_DETAIL"); }}
-                        className="flex flex-col items-center relative group w-full md:w-auto cursor-pointer"
-                      >
-                        {/* Vertical line for mobile */}
-                        {idx !== cyberRoadmap.length - 1 && <div className="absolute top-14 w-1 h-12 bg-slate-800 md:hidden"></div>}
-                        
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center relative z-10 transition-colors duration-300 shadow-xl
-                          ${step.status === 'completed' ? 'bg-emerald-500 text-white shadow-emerald-500/30' : 
-                            step.status === 'current' ? 'bg-blue-500 text-white shadow-blue-500/40 ring-4 ring-blue-500/20' : 
-                            'bg-slate-800 text-slate-500 border border-slate-700 hover:border-blue-500/50 hover:text-blue-400'}
-                        `}>
-                          <Icon className="w-6 h-6" />
-                          {step.status === 'completed' && <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5"><CheckCircle2 className="w-3 h-3 text-emerald-500"/></div>}
-                          {step.status === 'locked' && <div className="absolute -bottom-1 -right-1 bg-slate-700 rounded-full p-0.5"><Lock className="w-3 h-3 text-slate-400"/></div>}
-                        </div>
-                        
-                        <div className="mt-4 text-center md:absolute md:top-16 md:w-32 bg-slate-800/80 md:bg-transparent p-3 md:p-0 rounded-xl border border-slate-700 md:border-none backdrop-blur-sm z-20 group-hover:bg-slate-800 transition-colors">
-                          <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest block mb-1">Phase {step.step}</span>
-                          <p className={`text-xs font-extrabold leading-tight ${step.status === 'locked' ? 'text-slate-400 group-hover:text-blue-300' : 'text-slate-200'}`}>{step.title}</p>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-black text-[#0F2547]">Cybersecurity Engineering Pathway</h2>
+                    <span className="clay-badge-amber text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                      6 Core Phases
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium">Click on any phase card to inspect learning modules, tools, and hands-on CTF milestones.</p>
                 </div>
-             </div>
+              </div>
+
+              <div className="flex items-center gap-3 text-[10px] font-extrabold text-slate-500 self-start sm:self-center">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Completed</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Active Focus</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span> Locked</span>
+              </div>
+            </div>
+
+            {/* Responsive Interactive Roadmap Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+              {cyberRoadmap.map((step, idx) => {
+                const Icon = step.icon;
+                const isCompleted = step.status === "completed";
+                const isCurrent = step.status === "current";
+                const isLocked = step.status === "locked";
+
+                return (
+                  <motion.div
+                    key={idx}
+                    whileHover={{ y: -4, scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    onClick={() => {
+                      setSelectedRoadmapStep(step);
+                      setRoadmapDetailTab("CURRICULUM");
+                      setCurrentView("ROADMAP_DETAIL");
+                    }}
+                    className={`clay-card p-5 cursor-pointer relative overflow-hidden transition-all border ${
+                      isCurrent 
+                        ? "border-blue-400 bg-gradient-to-br from-blue-50/50 to-white shadow-lg ring-2 ring-blue-500/20" 
+                        : isCompleted
+                        ? "border-emerald-200 bg-gradient-to-br from-emerald-50/20 to-white"
+                        : "border-slate-200/80 bg-white/70 hover:border-blue-200"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
+                        isCurrent 
+                          ? "bg-blue-600 text-white shadow-blue-500/30" 
+                          : isCompleted
+                          ? "bg-emerald-500 text-white shadow-emerald-500/30"
+                          : "bg-slate-100 text-slate-500 border border-slate-200"
+                      }`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+
+                      <div className="text-right">
+                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                          isCurrent 
+                            ? "bg-blue-100 text-blue-800 border border-blue-200 animate-pulse" 
+                            : isCompleted
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            : "bg-slate-100 text-slate-500 border border-slate-200"
+                        }`}>
+                          {isCurrent ? "IN PROGRESS" : isCompleted ? "COMPLETED" : "LOCKED"}
+                        </span>
+                        <span className="block text-[9px] font-bold text-slate-400 mt-1">{step.duration}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest block">Phase 0{step.step}</span>
+                      <h4 className="text-sm font-black text-[#0F2547] leading-tight line-clamp-1">{step.title}</h4>
+                      <p className="text-[11px] text-slate-500 font-medium leading-relaxed line-clamp-2">{step.desc}</p>
+                    </div>
+
+                    <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[10px] font-extrabold">
+                      <span className="text-slate-400">{step.topics.length} Modules • {step.level}</span>
+                      <span className="text-blue-600 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                        Explore <ArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
 
         </div>
       )}
 
       {/* ========================================================= */}
-      {/* VIEW 5: FULL ACTIVITY LOG (SPA WITH FRAMER ANIMATIONS)    */}
-      {/* ========================================================= */}
-      {currentView === "ACTIVITY_LOG" && (
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="max-w-4xl mx-auto clay-card p-6 sm:p-10">
-           <div className="text-center space-y-3 border-b border-slate-200 pb-8 mb-12">
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 12 }} className="w-16 h-16 mx-auto bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center clay-inset shadow-inner">
-              <HistoryIcon className="w-8 h-8" />
-            </motion.div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0F2547]">Detailed Activity History</h2>
-            <p className="text-sm text-slate-500 font-medium">A complete animated timeline of your interactions.</p>
-          </div>
-
-          <div className="relative border-l-2 border-slate-200 ml-4 sm:ml-8 space-y-10 pb-8">
-             {attendances.map((att, idx) => (
-               <motion.div 
-                 key={`full-att-${idx}`}
-                 initial={{ opacity: 0, x: -100, y: 50 }} 
-                 animate={{ opacity: 1, x: 0, y: 0 }} 
-                 transition={{ type: "spring", stiffness: 120, damping: 14, delay: idx * 0.15 }}
-                 className="relative pl-6 sm:pl-10"
-               >
-                 <div className="absolute -left-[11px] top-1 w-5 h-5 bg-purple-500 rounded-full ring-4 ring-purple-100 shadow-sm animate-pulse"></div>
-                 <div className="bg-white border-2 border-purple-100 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden group">
-                   <div className="absolute inset-0 bg-gradient-to-r from-purple-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                   <div className="relative z-10">
-                     <div className="flex flex-wrap gap-2 items-center justify-between mb-3">
-                       <span className="text-[10px] font-black text-purple-700 bg-purple-100 px-3 py-1.5 rounded-lg uppercase tracking-widest border border-purple-200 flex items-center gap-1.5"><ScanLine className="w-3 h-3"/> Attendance Logged</span>
-                       <span className="text-xs font-extrabold text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">{new Date(att.date).toLocaleDateString()}</span>
-                     </div>
-                     <h3 className="text-lg font-extrabold text-[#0F2547] mb-2">{att.eventName}</h3>
-                     <p className="text-xs text-slate-500 mt-2 font-medium flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500"/> Verified and stored</p>
-                   </div>
-                 </div>
-               </motion.div>
-             ))}
-
-             {data?.mainApp && (
-               <motion.div 
-                 initial={{ opacity: 0, x: -100, y: 50 }} 
-                 animate={{ opacity: 1, x: 0, y: 0 }} 
-                 transition={{ type: "spring", stiffness: 120, damping: 14 }}
-                 className="relative pl-6 sm:pl-10"
-               >
-                 <div className="absolute -left-[11px] top-1 w-5 h-5 bg-amber-500 rounded-full ring-4 ring-amber-100 shadow-sm animate-pulse"></div>
-                 <div className="bg-white border-2 border-amber-100 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden group">
-                   <div className="absolute inset-0 bg-gradient-to-r from-amber-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                   <div className="relative z-10">
-                     <div className="flex flex-wrap gap-2 items-center justify-between mb-3">
-                       <span className="text-[10px] font-black text-amber-700 bg-amber-100 px-3 py-1.5 rounded-lg uppercase tracking-widest border border-amber-200 flex items-center gap-1.5"><Award className="w-3 h-3"/> Core Application</span>
-                       <span className="text-xs font-extrabold text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">{new Date(data.mainApp.appliedAt).toLocaleDateString()}</span>
-                     </div>
-                     <h3 className="text-lg font-extrabold text-[#0F2547] mb-2">{data.mainApp.topicInterested}</h3>
-                     <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-                       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status:</span>
-                       <span className={`text-xs font-black uppercase px-3 py-1 rounded-md ${data.mainApp.status === 'WAITING' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700'}`}>{data.mainApp.status}</span>
-                     </div>
-                   </div>
-                 </div>
-               </motion.div>
-             )}
-
-             {data?.otherResponses?.map((res: any, idx: number) => (
-               <motion.div 
-                 key={idx}
-                 initial={{ opacity: 0, x: idx % 2 === 0 ? 100 : -100, y: 50 }} 
-                 animate={{ opacity: 1, x: 0, y: 0 }} 
-                 transition={{ type: "spring", stiffness: 120, damping: 14, delay: (idx + 1) * 0.15 }}
-                 className="relative pl-6 sm:pl-10"
-               >
-                 <div className="absolute -left-[9px] top-2 w-4 h-4 bg-blue-500 rounded-full ring-4 ring-blue-100 shadow-sm"></div>
-                 <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-md hover:shadow-lg transition-all hover:-translate-y-1 relative overflow-hidden group">
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                   <div className="relative z-10">
-                     <div className="flex flex-wrap gap-2 items-center justify-between mb-2">
-                       <span className="text-[10px] font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md uppercase tracking-widest border border-blue-100">Event Submission</span>
-                       <span className="text-[10px] font-bold text-slate-400">{new Date(res.submittedAt || Date.now()).toLocaleDateString()}</span>
-                     </div>
-                     <h3 className="text-base font-extrabold text-[#0F2547]">{res.form?.title || "Unknown Form"}</h3>
-                     <p className="text-xs text-slate-500 mt-2 font-medium flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500"/> Secured in Data Vault</p>
-                   </div>
-                 </div>
-               </motion.div>
-             ))}
-
-             {!data?.mainApp && (!data?.otherResponses || data?.otherResponses.length === 0) && attendances.length === 0 && (
-                <div className="pl-8 text-slate-400 text-sm font-bold py-10">No history available yet.</div>
-             )}
-          </div>
-        </motion.div>
-      )}
-
-      {/* ========================================================= */}
-      {/* VIEW 6: ROADMAP DEPTH ANALYSIS (SPA)                      */}
+      {/* VIEW 2: DEEP ROADMAP CURRICULUM ANALYSIS (SPA VIEW)       */}
       {/* ========================================================= */}
       {currentView === "ROADMAP_DETAIL" && selectedRoadmapStep && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 20 }} className="max-w-5xl mx-auto clay-card p-6 sm:p-12 overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-100/40 rounded-full blur-[80px] pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
-          
-          <div className="relative z-10 mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-200 pb-8">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.98 }} 
+          animate={{ opacity: 1, scale: 1 }} 
+          transition={{ type: "spring", stiffness: 200, damping: 20 }} 
+          className="clay-card p-6 sm:p-10 space-y-8 border border-white shadow-xl"
+        >
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 pb-6 border-b border-blue-200/50">
             <div className="flex items-center gap-4">
-              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg text-white
-                 ${selectedRoadmapStep.status === 'completed' ? 'bg-emerald-500' : selectedRoadmapStep.status === 'current' ? 'bg-blue-600 ring-4 ring-blue-100' : 'bg-slate-700'}`}>
+              <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg text-white ${
+                selectedRoadmapStep.status === 'completed' 
+                  ? 'bg-emerald-500 shadow-emerald-500/30' 
+                  : selectedRoadmapStep.status === 'current' 
+                  ? 'bg-blue-600 shadow-blue-500/40 ring-4 ring-blue-100' 
+                  : 'bg-slate-700'
+              }`}>
                 <selectedRoadmapStep.icon className="w-8 h-8" />
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest bg-slate-100 px-3 py-1 rounded-full">Phase {selectedRoadmapStep.step} Analysis</span>
-                <h2 className="text-3xl sm:text-4xl font-black text-[#0F2547] mt-2">{selectedRoadmapStep.title}</h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="clay-badge-blue text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase">
+                    Phase 0{selectedRoadmapStep.step} Track
+                  </span>
+                  <span className="text-[10px] font-extrabold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
+                    {selectedRoadmapStep.duration}
+                  </span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-[#0F2547] mt-1">{selectedRoadmapStep.title}</h2>
               </div>
             </div>
-            <button onClick={() => setCurrentView("DASHBOARD")} className="clay-btn px-5 py-2.5 text-xs font-bold text-slate-600 flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors shrink-0 shadow-sm border border-slate-200">
-              <ChevronLeft className="w-4 h-4" /> Back to Map
+
+            <button 
+              onClick={() => setCurrentView("DASHBOARD")} 
+              className="clay-btn px-4 py-2.5 text-xs font-black text-slate-700 flex items-center gap-1.5 self-start md:self-center hover:text-blue-600 shadow-sm"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span>Back to Dashboard</span>
             </button>
           </div>
 
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10">
-            <div className="space-y-6">
-              <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-                <h3 className="text-sm font-extrabold text-blue-900 uppercase tracking-widest mb-2 flex items-center gap-2"><Info className="w-4 h-4"/> Overview</h3>
-                <p className="text-sm text-blue-800/80 leading-relaxed font-medium">{selectedRoadmapStep.desc}</p>
-              </div>
-              
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-widest flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500"/> Core Competencies</h3>
-                <p className="text-xs text-slate-500 font-medium leading-relaxed">Mastering this phase unlocks the ability to understand systemic flaws in architecture and paves the way for advanced exploitation frameworks.</p>
-              </div>
-            </div>
+          {/* Sub-Navigation Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            {[
+              { id: "CURRICULUM", label: "Core Curriculum", icon: BookOpen },
+              { id: "TOOLS", label: "Arsenal & Tools", icon: Cpu },
+              { id: "MILESTONE", label: "Hands-on Milestone", icon: Target },
+              { id: "CERT", label: "Industry Credentials", icon: Award }
+            ].map((tab) => {
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setRoadmapDetailTab(tab.id as any)}
+                  className={`px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shrink-0 ${
+                    roadmapDetailTab === tab.id
+                      ? "clay-btn-primary shadow-md"
+                      : "clay-btn text-slate-600 hover:text-blue-600"
+                  }`}
+                >
+                  <TabIcon className="w-3.5 h-3.5" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-            <div>
-              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Code className="w-4 h-4"/> Topics to Master</h3>
-              <div className="space-y-3">
+          {/* Tab 1: Core Curriculum */}
+          {roadmapDetailTab === "CURRICULUM" && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div className="lg:col-span-5 space-y-4">
+                <div className="clay-inset p-5 rounded-3xl space-y-3">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-blue-700 flex items-center gap-2">
+                    <Info className="w-4 h-4" /> Phase Mission
+                  </h4>
+                  <p className="text-xs text-slate-600 font-semibold leading-relaxed">{selectedRoadmapStep.desc}</p>
+                </div>
+
+                <div className="clay-card p-5 rounded-3xl space-y-2 border border-white">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-emerald-700 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> Core Mastery
+                  </h4>
+                  <p className="text-[11px] text-slate-500 font-semibold leading-relaxed">
+                    Completing this track certifies your capability to analyze and audit critical network vectors, system privilege escalation paths, and web authentication models.
+                  </p>
+                </div>
+              </div>
+
+              <div className="lg:col-span-7 space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Modules to Master:</h4>
                 {selectedRoadmapStep.topics?.map((topic: string, idx: number) => (
                   <motion.div 
-                    initial={{ opacity: 0, x: 50 }} 
-                    animate={{ opacity: 1, x: 0 }} 
-                    transition={{ type: "spring", stiffness: 100, damping: 12, delay: idx * 0.15 }}
-                    key={idx} 
-                    className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-blue-300 hover:shadow-md transition-colors cursor-default group"
+                    key={idx}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.08 }}
+                    className="clay-card p-4 rounded-2xl border border-white flex items-center gap-3.5 hover:border-blue-200 transition-all"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-xs font-black text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">0{idx + 1}</div>
-                    <span className="text-sm font-bold text-[#0F2547]">{topic}</span>
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 font-black text-xs flex items-center justify-center shrink-0 border border-blue-100">
+                      0{idx + 1}
+                    </div>
+                    <span className="text-xs font-black text-[#0F2547]">{topic}</span>
                   </motion.div>
                 ))}
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Tab 2: Arsenal & Tools */}
+          {roadmapDetailTab === "TOOLS" && (
+            <div className="space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Essential Exploitation &amp; Defense Arsenal:</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {selectedRoadmapStep.tools?.map((tool: string, idx: number) => (
+                  <div key={idx} className="clay-card p-5 rounded-3xl text-center space-y-2 border border-white hover:-translate-y-1 transition-all">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 flex items-center justify-center mx-auto shadow-inner">
+                      <Terminal className="w-6 h-6" />
+                    </div>
+                    <h5 className="text-xs font-black text-[#0F2547]">{tool}</h5>
+                    <span className="text-[9px] font-extrabold text-blue-600 uppercase bg-blue-50 px-2 py-0.5 rounded-full inline-block">Production Tool</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tab 3: Hands-on Milestone */}
+          {roadmapDetailTab === "MILESTONE" && (
+            <div className="clay-inset p-8 rounded-3xl space-y-4 text-center max-w-2xl mx-auto">
+              <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto shadow-inner">
+                <Target className="w-8 h-8" />
+              </div>
+              <span className="clay-badge-amber text-[10px] font-black px-3 py-1 rounded-full uppercase">Practical Lab Milestone</span>
+              <h3 className="text-xl font-black text-[#0F2547]">{selectedRoadmapStep.milestone}</h3>
+              <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">
+                Execute this hands-on lab in the club cyber sandbox or Hack The Box academy to earn verified skill credentials.
+              </p>
+            </div>
+          )}
+
+          {/* Tab 4: Industry Credentials */}
+          {roadmapDetailTab === "CERT" && (
+            <div className="clay-card p-8 rounded-3xl border border-white text-center space-y-4 max-w-2xl mx-auto">
+              <div className="w-16 h-16 rounded-3xl bg-purple-100 text-purple-700 flex items-center justify-center mx-auto shadow-inner">
+                <Award className="w-8 h-8" />
+              </div>
+              <span className="text-[10px] font-black uppercase text-purple-700 bg-purple-100 px-3 py-1 rounded-full border border-purple-200">
+                Industry Certification Alignment
+              </span>
+              <h3 className="text-xl font-black text-[#0F2547]">{selectedRoadmapStep.cert}</h3>
+              <p className="text-xs text-slate-500 font-semibold max-w-md mx-auto">
+                The concepts covered in this phase directly map to the official syllabus and practical exam domains of this credential.
+              </p>
+            </div>
+          )}
         </motion.div>
       )}
 
       {/* ========================================================= */}
-      {/* VIEW 2: STATUS & GAMIFIED TRACKING PAGE                   */}
+      {/* VIEW 3: APPLICATION STATUS & GAMIFIED QUEUE TRACKER       */}
       {/* ========================================================= */}
       {currentView === "STATUS" && selectedForm && (
-        <div className="max-w-5xl mx-auto animate-in slide-in-from-right-8 duration-300">
-          
+        <div className="max-w-5xl mx-auto animate-in slide-in-from-right-4 duration-300">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-8">
             
-            {/* LEFT SIDE: INSTRUCTIONS & TIPS */}
-            <div className="md:col-span-5 space-y-6 order-2 md:order-1">
-              <div className="clay-card p-6 space-y-5 h-full border border-blue-50">
-                <h3 className="font-extrabold text-[#0F2547] flex items-center gap-2 border-b border-slate-100 pb-3">
-                  <Lightbulb className="w-5 h-5 text-amber-500" /> Journey Tips
+            {/* LEFT: INSTRUCTIONS & JOURNEY TIPS */}
+            <div className="md:col-span-5 space-y-5 order-2 md:order-1">
+              <div className="clay-card p-6 space-y-4 h-full border border-white">
+                <h3 className="font-black text-[#0F2547] text-sm uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-3">
+                  <Lightbulb className="w-4 h-4 text-amber-500" /> Student Journey Guidelines
                 </h3>
                 
                 {selectedForm.isMaster && (!data?.mainApp || data.mainApp.status === "WAITING") && (
-                  <div className="space-y-4">
-                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                      Hey there! 👋 Your application is currently in the <strong>shortlisting process</strong>. We process candidates on a strict FIFO (first-in, first-out) basis. 
+                  <div className="space-y-3.5 text-xs">
+                    <p className="text-slate-600 leading-relaxed font-semibold">
+                      Your application is queued in the <strong>candidate shortlisting pipeline</strong>. Candidates are processed on a strict FIFO merit basis.
                     </p>
-                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                      <p className="text-xs text-blue-800 font-medium leading-relaxed">
-                        Since there are many students in the queue, please <strong>keep patience</strong>. Everyone will get their turn, and you are on our priority list!
+                    <div className="clay-inset p-3.5 rounded-2xl">
+                      <p className="text-blue-800 font-bold leading-relaxed text-[11px]">
+                        Weekly slots are released every cycle. Please be patient while admins review your topic portfolio.
                       </p>
                     </div>
-                    <div className="space-y-2 pt-2">
-                      <h4 className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5"><BellRing className="w-3.5 h-3.5 text-amber-500"/> Nudge Feature</h4>
-                      <p className="text-[11px] text-slate-600">You can use the Nudge button once every 3 days to directly notify admins about your pending application.</p>
-                    </div>
-                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 space-y-2">
-                      <h4 className="text-xs font-extrabold text-amber-800 flex items-center gap-1.5"><MailWarning className="w-4 h-4"/> Email Checking Tip</h4>
-                      <p className="text-[10px] sm:text-[11px] text-amber-700 font-bold leading-relaxed">
-                        Shortlisting confirmation will be sent to your registered email. Keep checking your <strong>Inbox</strong> and <strong>Spam folder</strong>. If our mail is in spam, click <strong>"Report not spam"</strong>.
+                    <div className="clay-inset p-3.5 rounded-2xl space-y-1">
+                      <h4 className="text-[11px] font-black text-slate-800 flex items-center gap-1.5">
+                        <BellRing className="w-3.5 h-3.5 text-amber-500"/> Nudge Dispatch Control
+                      </h4>
+                      <p className="text-[10px] text-slate-500 font-medium">
+                        You can send an admin notification once every 3 days to bring attention to your pending review.
                       </p>
                     </div>
                   </div>
                 )}
 
                 {selectedForm.isMaster && (data?.mainApp?.status === "SHORTLISTED" || data?.mainApp?.status === "SCREENING_DONE") && (
-                  <div className="space-y-4">
-                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                      Awesome! You have cleared the queue. Now it's time to shine in your presentation.
+                  <div className="space-y-3 text-xs">
+                    <p className="text-slate-600 font-semibold leading-relaxed">
+                      Congratulations! You have cleared the initial queue. Next steps:
                     </p>
-                    <ul className="text-xs text-slate-600 space-y-3 mt-2">
-                      <li className="flex gap-2 items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"/> <strong>Prepare your topic:</strong> Do deep research and make clean, point-to-point slides.</li>
-                      <li className="flex gap-2 items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"/> <strong>Be confident:</strong> Practice your speaking delivery in front of a mirror to avoid hesitation.</li>
-                      <li className="flex gap-2 items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"/> <strong>Be on time:</strong> Reach the studio exactly on the given scheduled time.</li>
+                    <ul className="text-[11px] text-slate-600 space-y-2 font-medium">
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0"/> Prepare clean, structured slides on your chosen topic.</li>
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0"/> Practice your presentation delivery and timing.</li>
+                      <li className="flex gap-2 items-start"><CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0"/> Arrive at the media studio on your allocated schedule.</li>
                     </ul>
                   </div>
                 )}
 
                 {!selectedForm.isMaster && (
-                  <div className="space-y-4">
-                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                      Your details for this event have been safely recorded in our Data Vault. 
+                  <div className="space-y-3 text-xs">
+                    <p className="text-slate-600 font-semibold leading-relaxed">
+                      Your response has been verified and securely vaulted in the database.
                     </p>
-                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                      <p className="text-xs text-blue-800 font-medium">
-                        Any further instructions or event links will be communicated directly via your registered email. Please keep an eye on your inbox!
+                    <div className="clay-inset p-3.5 rounded-2xl">
+                      <p className="text-blue-800 font-bold leading-relaxed text-[11px]">
+                        Event updates and links will be communicated via your registered institutional email address.
                       </p>
                     </div>
                   </div>
@@ -817,96 +1341,99 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            {/* RIGHT SIDE: ANIMATED STATUS MAP */}
+            {/* RIGHT: ANIMATED STATUS MAP */}
             <div className="md:col-span-7 space-y-6 order-1 md:order-2">
-              <div className={`clay-card p-6 sm:p-10 text-center border-t-4 relative overflow-hidden ${
-                (selectedForm.isMaster && data?.mainApp?.status === "WAITING") ? "border-t-amber-400" : "border-t-emerald-400"
-              }`}>
-                <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full blur-3xl pointer-events-none ${
-                  (selectedForm.isMaster && data?.mainApp?.status === "WAITING") ? "bg-amber-100/60" : "bg-emerald-100/60"
-                }`}></div>
-                
-                <div className="relative z-10 space-y-8">
-                  <div className="text-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 border border-slate-200 px-3 py-1 rounded-full">{selectedForm.isMaster ? "Live Queue Tracker" : "Submission Status"}</span>
-                    <h2 className="text-xl sm:text-2xl font-extrabold text-[#0F2547] mt-4 mb-2">{selectedForm.title}</h2>
+              <div className="clay-card p-6 sm:p-8 text-center border border-white relative overflow-hidden">
+                <div className="relative z-10 space-y-6">
+                  <div>
+                    <span className="clay-badge-blue text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                      {selectedForm.isMaster ? "Live Queue Status" : "Submission Encrypted"}
+                    </span>
+                    <h2 className="text-xl sm:text-2xl font-black text-[#0F2547] mt-3">{selectedForm.title}</h2>
                   </div>
 
                   {selectedForm.isMaster ? (
-                    // 🟢 MASTER / QUEUE FORM TRACKER
                     <>
                       {/* Gamified Progress Bar */}
-                      <div className="relative max-w-md mx-auto pt-4 pb-8">
-                         <div className="absolute top-1/2 left-0 w-full h-1.5 bg-slate-100 -translate-y-1/2 rounded-full z-0">
-                           <div className={`h-full rounded-full transition-all duration-1000 ease-in-out ${data?.mainApp?.status === "WAITING" ? 'bg-amber-400 w-1/2' : 'bg-emerald-500 w-full'}`}></div>
-                         </div>
-                         
-                         <div className="flex justify-between relative z-10">
-                           {/* Steps for Submitted, Review, Approved */}
-                           <div className="flex flex-col items-center gap-2">
-                             <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg ring-4 ring-white"><CheckCircle className="w-5 h-5"/></div>
-                             <span className="text-[10px] font-black text-slate-700 uppercase">Submitted</span>
-                           </div>
-                           
-                           <div className="flex flex-col items-center gap-2">
-                             <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white transition-all duration-500 ${data?.mainApp?.status === "WAITING" ? 'bg-amber-400 text-white scale-110 animate-pulse' : 'bg-emerald-500 text-white'}`}>
-                                {data?.mainApp?.status === "WAITING" ? <Clock className="w-6 h-6"/> : <CheckCircle className="w-6 h-6"/>}
-                             </div>
-                             <span className={`text-[10px] font-black uppercase ${data?.mainApp?.status === "WAITING" ? 'text-amber-600' : 'text-slate-700'}`}>Review</span>
-                           </div>
+                      <div className="relative max-w-md mx-auto pt-4 pb-6">
+                        <div className="absolute top-1/2 left-0 w-full h-1.5 bg-slate-100 -translate-y-1/2 rounded-full z-0">
+                          <div className={`h-full rounded-full transition-all duration-1000 ease-in-out ${
+                            data?.mainApp?.status === "WAITING" ? 'bg-amber-400 w-1/2' : 'bg-emerald-500 w-full'
+                          }`}></div>
+                        </div>
+                        
+                        <div className="flex justify-between relative z-10">
+                          <div className="flex flex-col items-center gap-1.5">
+                            <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg"><CheckCircle className="w-5 h-5"/></div>
+                            <span className="text-[10px] font-black text-slate-700 uppercase">Submitted</span>
+                          </div>
+                          
+                          <div className="flex flex-col items-center gap-1.5">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all ${
+                              data?.mainApp?.status === "WAITING" ? 'bg-amber-400 text-white scale-105 animate-pulse' : 'bg-emerald-500 text-white'
+                            }`}>
+                              {data?.mainApp?.status === "WAITING" ? <Clock className="w-6 h-6"/> : <CheckCircle className="w-6 h-6"/>}
+                            </div>
+                            <span className={`text-[10px] font-black uppercase ${data?.mainApp?.status === "WAITING" ? 'text-amber-600' : 'text-slate-700'}`}>Review</span>
+                          </div>
 
-                           <div className="flex flex-col items-center gap-2">
-                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ring-4 ring-white transition-all duration-500 ${data?.mainApp?.status === "WAITING" ? 'bg-slate-100 text-slate-300' : 'bg-emerald-500 text-white shadow-lg scale-110'}`}>
-                               <Award className="w-5 h-5"/>
-                             </div>
-                             <span className={`text-[10px] font-black uppercase ${data?.mainApp?.status === "WAITING" ? 'text-slate-400' : 'text-emerald-600'}`}>Approved</span>
-                           </div>
-                         </div>
+                          <div className="flex flex-col items-center gap-1.5">
+                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all ${
+                              data?.mainApp?.status === "WAITING" ? 'bg-slate-100 text-slate-300' : 'bg-emerald-500 text-white shadow-lg'
+                            }`}>
+                              <Award className="w-5 h-5"/>
+                            </div>
+                            <span className={`text-[10px] font-black uppercase ${data?.mainApp?.status === "WAITING" ? 'text-slate-400' : 'text-emerald-600'}`}>Shortlisted</span>
+                          </div>
+                        </div>
                       </div>
 
                       {data?.mainApp?.status === "WAITING" ? (
-                        <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-100">
-                          <p className="text-sm font-bold text-amber-800">Your application is in the queue.</p>
-                          <p className="text-xs text-amber-700/80 mt-1 font-medium">Admins are currently reviewing candidates. You will be notified once a slot is assigned.</p>
+                        <div className="clay-inset p-4 rounded-2xl text-xs font-bold text-amber-800">
+                          Your submission is waiting in the active review pool.
                         </div>
                       ) : (
-                        <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
-                          <p className="text-sm font-bold text-emerald-800">Congratulations! You're shortlisted.</p>
-                          <p className="text-xs text-emerald-700/80 mt-1 font-medium">Check your email for the exact schedule and presentation details.</p>
+                        <div className="clay-inset p-4 rounded-2xl text-xs font-bold text-emerald-800">
+                          Congratulations! Your topic has been selected for this week's broadcast slot.
                         </div>
                       )}
 
-                      {/* Nudge Control */}
+                      {/* Nudge Button */}
                       {data?.mainApp?.status === "WAITING" && (
-                        <div className="mt-8 pt-6 border-t border-slate-100">
+                        <div className="pt-4 border-t border-slate-100">
                           <button 
                             onClick={handleNudge}
                             disabled={data.mainApp.hasNudged || loading === "nudge"}
-                            className={`w-full sm:w-3/4 mx-auto py-4 rounded-xl text-sm font-extrabold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all ${
+                            className={`w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
                               data.mainApp.hasNudged 
-                              ? "bg-slate-50 text-amber-600 cursor-not-allowed border border-amber-100" 
-                              : "bg-gradient-to-r from-amber-400 to-amber-500 text-white hover:scale-105 hover:shadow-lg"
+                                ? "bg-amber-100 text-amber-700 border-2 border-amber-300 opacity-80 cursor-not-allowed shadow-inner" 
+                                : "clay-btn-primary shadow-lg hover:shadow-xl active:scale-95"
                             }`}
                           >
-                            <BellRing className={`w-5 h-5 ${!data.mainApp.hasNudged && "animate-bounce"}`} />
-                            {data.mainApp.hasNudged ? "Admin Notified Successfully" : "Nudge Admin Now"}
+                            <BellRing className={`w-4 h-4 ${!data.mainApp.hasNudged && "animate-bounce"}`} />
+                            <span>
+                              {data.mainApp.hasNudged 
+                                ? "Admin Notified (Awaiting Review)" 
+                                : "Nudge Admins (Priority Alert)"}
+                            </span>
                           </button>
+                          {data.mainApp.hasNudged && (
+                             <p className="text-[9px] font-bold text-slate-400 mt-2 text-center">
+                               We have acknowledged your nudge. You will be placed in an upcoming queue soon.
+                             </p>
+                          )}
                         </div>
                       )}
                     </>
                   ) : (
-                    // 🟢 NORMAL / EVENT FORM SUCCESS SCREEN (No Queue, No Nudge)
-                    <div className="flex flex-col items-center justify-center py-6 space-y-4">
-                       <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center shadow-inner border-4 border-white ring-4 ring-emerald-50">
-                         <CheckCircle2 className="w-10 h-10 text-emerald-600" />
-                       </div>
-                       <div className="bg-emerald-50/80 p-5 rounded-2xl border border-emerald-100 max-w-sm mx-auto w-full mt-4">
-                         <p className="text-base font-extrabold text-emerald-900 mb-1">Response Recorded!</p>
-                         <p className="text-xs text-emerald-700 font-medium">Your submission has been securely encrypted and stored directly in the Data Vault. No further action is required.</p>
-                       </div>
+                    <div className="clay-inset p-8 rounded-3xl space-y-3">
+                      <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
+                      <h4 className="text-base font-black text-[#0F2547]">Response Encrypted in Data Vault</h4>
+                      <p className="text-xs text-slate-500 font-semibold max-w-sm mx-auto">
+                        Your event registration has been registered. No further action is required from your side.
+                      </p>
                     </div>
                   )}
-
                 </div>
               </div>
             </div>
@@ -916,84 +1443,84 @@ export default function StudentDashboard() {
       )}
 
       {/* ========================================================= */}
-      {/* VIEW 3: INSTRUCTIONS PAGE (SPA Transition)                  */}
+      {/* VIEW 4: OFFICIAL PROGRAM INSTRUCTIONS MODAL/PAGE          */}
       {/* ========================================================= */}
       {currentView === "INSTRUCTIONS" && selectedForm && (
-        <div className="max-w-4xl mx-auto animate-in slide-in-from-right-8 duration-500 relative">
+        <div className="max-w-4xl mx-auto animate-in slide-in-from-right-4 duration-300">
           {(() => {
             const { theme, blocks } = getInstructionData();
+            const currentTheme = theme || "classic";
             
             return (
-              <div className={`p-8 sm:p-12 transition-all duration-500 relative overflow-hidden
-                 ${theme === 'classic' ? 'bg-white rounded-[32px] border border-slate-200 shadow-lg' : ''}
-                 ${theme === 'cyber' ? 'bg-[#0a0f1a] rounded-[24px] border-2 border-emerald-900/50 shadow-[0_0_40px_rgba(16,185,129,0.1)] font-mono text-emerald-50' : ''}
-                 ${theme === 'clay' ? 'bg-[#eef2f6] rounded-[40px] shadow-[12px_12px_24px_#d1d9e2,-12px_-12px_24px_#ffffff] border-[4px] border-white/60' : ''}
+              <div className={`p-8 sm:p-10 transition-all duration-500 space-y-6 relative overflow-hidden
+                 ${currentTheme === 'classic' ? 'bg-white rounded-[32px] border border-slate-200 shadow-xl' : ''}
+                 ${currentTheme === 'cyber' ? 'bg-[#0a0f1a] rounded-none border border-emerald-900/50 shadow-[0_0_30px_rgba(16,185,129,0.05)] font-mono text-emerald-50' : ''}
+                 ${currentTheme === 'clay' ? 'bg-[#eef2f6] rounded-[40px] shadow-[12px_12px_24px_#d1d9e2,-12px_-12px_24px_#ffffff] border-[3px] border-white/60' : ''}
                `}>
-                  
-                  {/* Decorative Elements */}
-                  {theme === 'cyber' && <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-50"></div>}
-                  {theme === 'clay' && <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-white/40 rounded-full blur-2xl pointer-events-none"></div>}
-                  
-                  <div className="relative z-10 space-y-8">
-                    <div className={`text-center mb-10 pb-8 ${theme === 'cyber' ? 'border-b border-emerald-900/50' : theme === 'clay' ? 'border-b-2 border-white' : 'border-b border-slate-100'}`}>
-                      <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-5 ${theme === 'cyber' ? 'bg-emerald-900/30 text-emerald-500 border border-emerald-500/30 drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]' : theme === 'clay' ? 'bg-[#eef2f6] shadow-[6px_6px_12px_#d1d9e2,-6px_-6px_12px_#ffffff] text-blue-600 border border-white/50' : 'bg-blue-50 text-blue-600 shadow-inner'}`}><FileText className="w-8 h-8" /></div>
-                      <h2 className={`text-2xl sm:text-3xl font-extrabold ${theme === 'cyber' ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : theme === 'clay' ? 'text-blue-900 tracking-tight' : 'text-[#0F2547]'}`}>Official Program Guidelines</h2>
-                      <p className={`text-sm mt-3 ${theme === 'cyber' ? 'text-emerald-600 font-bold' : theme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-500 font-medium'}`}>Please read the following instructions carefully before proceeding.</p>
+                <div className="relative z-10 space-y-6">
+                  <div className={`text-center mb-8 pb-8 ${currentTheme === 'cyber' ? 'border-b border-emerald-900/50' : currentTheme === 'clay' ? 'border-b-2 border-white' : 'border-b border-slate-100'}`}>
+                    <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4 ${currentTheme === 'cyber' ? 'bg-emerald-900/30 text-emerald-500 border border-emerald-500/30' : currentTheme === 'clay' ? 'bg-[#eef2f6] shadow-[4px_4px_8px_#d1d9e2,-4px_-4px_8px_#ffffff] text-blue-600' : 'bg-blue-50 text-blue-600 shadow-inner border border-blue-100'}`}>
+                      <FileText className="w-8 h-8" />
                     </div>
-                    
-                    {blocks.length === 0 ? (
-                       <div className={`text-center py-10 text-sm font-bold ${theme === 'cyber' ? 'text-emerald-800' : 'text-slate-400'}`}>No instructions provided for this form.</div>
-                    ) : (
-                       <div className="space-y-6">
-                         {blocks.map((block: any, idx: number) => {
-                           if (block.type === 'h3') return <h3 key={idx} className={`text-xl sm:text-2xl font-extrabold pb-4 ${theme === 'cyber' ? 'text-emerald-400 border-b border-emerald-900/50 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]' : theme === 'clay' ? 'text-blue-950 border-b-2 border-white' : 'text-[#0F2547] border-b border-slate-100'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />;
-                           if (block.type === 'p') return <p key={idx} className={`text-sm leading-relaxed ${theme === 'cyber' ? 'text-emerald-200/80 font-medium' : theme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-600 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />;
-                           if (block.type === 'bullet') return (
-                             <div key={idx} className="flex gap-3 items-start pl-1 mt-1">
-                               <div className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 ${theme === 'cyber' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : theme === 'clay' ? 'bg-blue-400 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.2)]' : 'bg-blue-500'}`}></div>
-                               <p className={`text-sm leading-relaxed ${theme === 'cyber' ? 'text-emerald-200/80 font-medium' : theme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-700 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />
-                             </div>
-                           );
-                           if (block.type === 'number') {
-                             const numIndex = blocks.slice(0, idx).filter((b: any) => b.type === 'number').length + 1;
-                             return (
-                               <div key={idx} className="flex gap-4 items-start mt-1">
-                                 <div className={`w-8 h-8 flex items-center justify-center shrink-0 font-black text-sm mt-0.5
-                                   ${theme === 'classic' ? 'rounded-lg bg-blue-50 text-blue-700 border border-blue-100 shadow-sm' : ''}
-                                   ${theme === 'cyber' ? 'rounded bg-emerald-950/50 text-emerald-400 border border-emerald-800' : ''}
-                                   ${theme === 'clay' ? 'rounded-xl bg-[#eef2f6] text-blue-600 shadow-[4px_4px_8px_#d1d9e2,-4px_-4px_8px_#ffffff] border border-white/50' : ''}
-                                 `}>{numIndex}</div>
-                                 <p className={`text-sm sm:text-base leading-relaxed mt-1 ${theme === 'cyber' ? 'text-emerald-200/80 font-medium' : theme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-700 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />
-                               </div>
-                             );
-                           }
-                           if (block.type === 'alert') return (
-                             <div key={idx} className={`p-5 sm:p-6 flex gap-4 mt-6 
-                               ${theme === 'classic' ? 'bg-amber-50 rounded-2xl border border-amber-100' : ''}
-                               ${theme === 'cyber' ? 'bg-red-950/20 rounded-none border-l-4 border-red-500/50' : ''}
-                               ${theme === 'clay' ? 'bg-[#eef2f6] shadow-[inset_6px_6px_12px_#d1d9e2,inset_-6px_-6px_12px_#ffffff] rounded-3xl border border-white/40' : ''}
-                             `}>
-                               <AlertTriangle className={`w-6 h-6 shrink-0 ${theme === 'cyber' ? 'text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]' : theme === 'clay' ? 'text-amber-500' : 'text-amber-500'}`}/>
-                               <p className={`text-sm sm:text-base font-bold leading-relaxed ${theme === 'cyber' ? 'text-red-300/80' : theme === 'clay' ? 'text-amber-700' : 'text-amber-800'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />
-                             </div>
-                           );
-                           return null;
-                         })}
-                       </div>
-                    )}
-                    
-                    <div className={`mt-12 pt-8 flex justify-end ${theme === 'cyber' ? 'border-t border-emerald-900/50' : theme === 'clay' ? 'border-t-2 border-white' : 'border-t border-slate-200'}`}>
-                      <button 
-                        onClick={() => setCurrentView("FORM")}
-                        className={`px-8 sm:px-10 py-4 sm:py-5 text-sm sm:text-base font-extrabold uppercase tracking-widest flex items-center justify-center gap-3 transition-transform hover:scale-[1.02] active:scale-95
-                          ${theme === 'cyber' ? 'bg-emerald-500 text-black hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 
-                            theme === 'clay' ? 'bg-[#eef2f6] text-blue-700 rounded-[20px] shadow-[6px_6px_12px_#d1d9e2,-6px_-6px_12px_#ffffff] border-2 border-white hover:shadow-[inset_4px_4px_8px_#d1d9e2,inset_-4px_-4px_8px_#ffffff]' : 
-                            'bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-xl'}`}
-                      >
-                        Acknowledge & Proceed <ArrowRight className="w-5 h-5" />
-                      </button>
-                    </div>
+                    <h2 className={`text-2xl sm:text-3xl font-extrabold ${currentTheme === 'cyber' ? 'text-emerald-400' : currentTheme === 'clay' ? 'text-blue-900' : 'text-[#0F2547]'}`}>Official Program Guidelines</h2>
+                    <p className={`text-xs font-semibold mt-2 ${currentTheme === 'cyber' ? 'text-emerald-600' : 'text-slate-500'}`}>Please read these instructions before proceeding to the application form.</p>
                   </div>
+
+                  {blocks.length === 0 ? (
+                    <div className={`text-center py-8 text-xs font-bold ${currentTheme === 'cyber' ? 'text-emerald-800' : 'text-slate-400'}`}>No instructions specified for this form.</div>
+                  ) : (
+                    <div className="space-y-6">
+                      {blocks.map((block: any, idx: number) => {
+                        if (block.type === 'h3') return <h3 key={idx} className={`text-xl sm:text-2xl font-extrabold pb-3 ${currentTheme === 'cyber' ? 'text-emerald-400 border-b border-emerald-900/50 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]' : currentTheme === 'clay' ? 'text-blue-900 border-b-2 border-white' : 'text-[#0F2547] border-b border-slate-100'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />;
+                        if (block.type === 'p') return <p key={idx} className={`text-sm leading-relaxed ${currentTheme === 'cyber' ? 'text-emerald-200/80 font-medium' : currentTheme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-600 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />;
+                        if (block.type === 'bullet') return (
+                          <div key={idx} className="flex gap-3 items-start pl-1 mt-1">
+                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1.5 ${currentTheme === 'cyber' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : currentTheme === 'clay' ? 'bg-blue-400 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.2)]' : 'bg-blue-500'}`}></div>
+                            <p className={`text-sm leading-relaxed ${currentTheme === 'cyber' ? 'text-emerald-200/80 font-medium' : currentTheme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-700 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />
+                          </div>
+                        );
+                        if (block.type === 'number') {
+                          const numIndex = blocks.slice(0, idx).filter((b: any) => b.type === 'number').length + 1;
+                          return (
+                            <div key={idx} className="flex gap-3 items-start mt-1">
+                              <div className={`w-7 h-7 flex items-center justify-center shrink-0 font-black text-xs
+                                ${currentTheme === 'classic' ? 'rounded-lg bg-blue-50 text-blue-700 border border-blue-100 shadow-sm' : ''}
+                                ${currentTheme === 'cyber' ? 'rounded bg-emerald-950/50 text-emerald-400 border border-emerald-800' : ''}
+                                ${currentTheme === 'clay' ? 'rounded-xl bg-[#eef2f6] text-blue-600 shadow-[4px_4px_8px_#d1d9e2,-4px_-4px_8px_#ffffff] border border-white/50' : ''}
+                              `}>{numIndex}</div>
+                              <p className={`text-sm leading-relaxed mt-1 ${currentTheme === 'cyber' ? 'text-emerald-200/80 font-medium' : currentTheme === 'clay' ? 'text-slate-500 font-bold' : 'text-slate-700 font-medium'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />
+                            </div>
+                          );
+                        }
+                        if (block.type === 'alert') return (
+                          <div key={idx} className={`p-5 flex gap-3 mt-4 
+                            ${currentTheme === 'classic' ? 'bg-amber-50 rounded-xl border border-amber-100' : ''}
+                            ${currentTheme === 'cyber' ? 'bg-red-950/20 rounded-none border-l-2 border-red-500/50' : ''}
+                            ${currentTheme === 'clay' ? 'bg-[#eef2f6] shadow-[inset_6px_6px_12px_#d1d9e2,inset_-6px_-6px_12px_#ffffff] rounded-2xl border border-white/40' : ''}
+                          `}>
+                            <AlertTriangle className={`w-5 h-5 shrink-0 ${currentTheme === 'cyber' ? 'text-red-500 drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]' : currentTheme === 'clay' ? 'text-amber-600' : 'text-amber-500'}`}/>
+                            <p className={`text-[11px] sm:text-xs font-bold leading-relaxed ${currentTheme === 'cyber' ? 'text-red-300/80' : currentTheme === 'clay' ? 'text-amber-900' : 'text-amber-800'}`} dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(block.content)}} />
+                          </div>
+                        );
+                        return null;
+                      })}
+                    </div>
+                  )}
+
+                  <div className={`pt-8 mt-8 flex justify-end ${currentTheme === 'cyber' ? 'border-t border-emerald-900/50' : currentTheme === 'clay' ? 'border-t-2 border-white' : 'border-t border-slate-200'}`}>
+                    <button 
+                      onClick={() => setCurrentView("FORM")}
+                      className={`px-8 py-3.5 text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all active:scale-95 ${
+                        currentTheme === 'cyber' ? 'bg-emerald-500 text-slate-900 shadow-[0_0_15px_#10b981] hover:bg-emerald-400' : 
+                        currentTheme === 'clay' ? 'bg-[#eef2f6] text-blue-700 shadow-[6px_6px_12px_#d1d9e2,-6px_-6px_12px_#ffffff] border border-white hover:text-blue-800' : 
+                        'clay-btn-primary shadow-lg'
+                      }`}
+                    >
+                      <span>Acknowledge &amp; Proceed to Form</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
             );
           })()}
@@ -1001,69 +1528,88 @@ export default function StudentDashboard() {
       )}
 
       {/* ========================================================= */}
-      {/* VIEW 4: ACTUAL FORM PAGE (SPA Transition)                 */}
+      {/* VIEW 5: ACTUAL APPLICATION FORM VIEW                      */}
       {/* ========================================================= */}
       {currentView === "FORM" && selectedForm && (
-        <div className="max-w-4xl mx-auto clay-card p-6 sm:p-10 animate-in slide-in-from-right-8 duration-300">
-          
-          <div className="border-b border-slate-200 pb-6 mb-8">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0F2547]">{selectedForm.title}</h2>
-            <p className="text-sm text-slate-500 mt-2 bg-blue-50 p-3 rounded-lg border border-blue-100 font-medium">
-              {selectedForm.description}
-            </p>
+        <div className="max-w-3xl mx-auto clay-card p-6 sm:p-10 space-y-6 border border-white shadow-xl animate-in slide-in-from-right-4 duration-300">
+          <div className="border-b border-blue-200/50 pb-5">
+            <h2 className="text-2xl font-black text-[#0F2547]">{selectedForm.title}</h2>
+            <p className="text-xs text-slate-500 font-semibold mt-1 leading-relaxed">{selectedForm.description}</p>
           </div>
 
-          <form onSubmit={handleFormSubmit} className="space-y-8">
+          <form onSubmit={handleFormSubmit} className="space-y-6">
             {selectedForm.questions?.map((field: any) => {
               if (!field?.id) return null;
               return (
-                <div key={field.id} className="animate-in slide-in-from-bottom-2">
-                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2 ml-1">
+                <div key={field.id} className="space-y-2">
+                  <label className="block text-xs font-black text-[#0F2547] uppercase tracking-wider">
                     {field.fieldLabel} {field.isRequired && <span className="text-red-500">*</span>}
                   </label>
                   
                   {field.fieldType === "TEXT" && (
-                    <input type="text" name={field.fieldLabel} required={field.isRequired} maxLength={field.maxLength || undefined} className="clay-input w-full px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-shadow" placeholder={field.placeholder || "Type your answer..."} />
+                    <input 
+                      type="text" 
+                      name={field.fieldLabel} 
+                      required={field.isRequired} 
+                      maxLength={field.maxLength || undefined} 
+                      className="clay-input w-full px-4 py-3 text-xs font-bold" 
+                      placeholder={field.placeholder || "Type your response..."} 
+                    />
                   )}
-                  
-                  {/* 🟢 LOGIC FIX: Typescript safe number limitation */}
+
                   {field.fieldType === "NUMBER" && (
-                    <input type="number" name={field.fieldLabel} required={field.isRequired} 
+                    <input 
+                      type="number" 
+                      name={field.fieldLabel} 
+                      required={field.isRequired} 
                       onInput={(e: React.FormEvent<HTMLInputElement>) => {
                         const target = e.currentTarget;
                         if (field.maxLength && target.value.length > field.maxLength) {
                           target.value = target.value.slice(0, field.maxLength);
                         }
                       }} 
-                      className="clay-input w-full px-5 py-4 text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-shadow" placeholder={field.placeholder || (field.maxLength ? `Max length: ${field.maxLength}` : "Enter a valid number...")} />
+                      className="clay-input w-full px-4 py-3 text-xs font-bold" 
+                      placeholder={field.placeholder || "Enter number..."} 
+                    />
                   )}
-                  
+
                   {field.fieldType === "DROPDOWN" && (
                     <div className="relative">
-                      <select name={field.fieldLabel} required={field.isRequired} className="clay-input w-full px-5 py-4 text-sm font-bold bg-white appearance-none cursor-pointer focus:ring-2 focus:ring-blue-500 transition-shadow">
-                        <option value="">Select an option...</option>
+                      <select 
+                        name={field.fieldLabel} 
+                        required={field.isRequired} 
+                        className="clay-input w-full px-4 py-3 text-xs font-bold bg-white appearance-none cursor-pointer"
+                      >
+                        <option value="">Select option...</option>
                         {field.options?.map((opt: string, i: number) => <option key={i} value={opt}>{opt}</option>)}
                       </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-blue-600">
-                        <ChevronDown className="h-5 w-5" />
-                      </div>
+                      <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     </div>
                   )}
 
                   {field.fieldType === "CHECKBOX" && (
-                    <div className="space-y-3 mt-3 clay-inset p-5 rounded-xl">
+                    <div className="space-y-2 clay-inset p-4 rounded-2xl">
                       {field.options?.map((opt: string, i: number) => (
-                        <label key={i} className="flex items-center gap-3 cursor-pointer group">
-                          <input type={field.isMultiSelect ? "checkbox" : "radio"} name={field.isMultiSelect ? `${field.fieldLabel}[]` : field.fieldLabel} value={opt} className={`w-5 h-5 text-blue-600 bg-white border-slate-300 shadow-sm focus:ring-blue-500 cursor-pointer shrink-0 ${field.isMultiSelect ? 'rounded' : 'rounded-full'}`} />
-                          <span className="text-sm font-bold text-slate-700 group-hover:text-blue-700 transition-colors">{opt}</span>
+                        <label key={i} className="flex items-center gap-2.5 cursor-pointer">
+                          <input 
+                            type={field.isMultiSelect ? "checkbox" : "radio"} 
+                            name={field.isMultiSelect ? `${field.fieldLabel}[]` : field.fieldLabel} 
+                            value={opt} 
+                            className="w-4 h-4 text-blue-600 rounded cursor-pointer" 
+                          />
+                          <span className="text-xs font-bold text-slate-700">{opt}</span>
                         </label>
                       ))}
                     </div>
                   )}
 
                   {field.fieldType === "FILE_UPLOAD" && (
-                    <div className={`clay-inset p-6 rounded-2xl border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center group relative overflow-hidden ${selectedFiles[field.fieldLabel] ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200 hover:bg-blue-50 hover:border-blue-200'}`}>
-                      <input type="file" name={field.fieldLabel} required={field.isRequired} accept={field.options?.join(',')} 
+                    <div className="clay-inset p-5 rounded-2xl border-2 border-dashed border-blue-200 text-center relative overflow-hidden">
+                      <input 
+                        type="file" 
+                        name={field.fieldLabel} 
+                        required={field.isRequired} 
+                        accept={field.options?.join(',')} 
                         onChange={(e) => {
                           if (e.target.files && e.target.files[0]) {
                             setSelectedFiles(prev => ({ ...prev, [field.fieldLabel]: e.target.files![0].name }));
@@ -1072,17 +1618,17 @@ export default function StudentDashboard() {
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                       />
                       {selectedFiles[field.fieldLabel] ? (
-                        <>
-                          <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2 scale-110 transition-transform" />
-                          <p className="text-sm font-extrabold text-emerald-700 text-center px-4 truncate w-full">{selectedFiles[field.fieldLabel]}</p>
-                          <p className="text-[10px] font-bold text-emerald-600/80 mt-1 uppercase tracking-widest">Ready to submit</p>
-                        </>
+                        <div className="space-y-1">
+                          <CheckCircle2 className="w-7 h-7 text-emerald-500 mx-auto" />
+                          <p className="text-xs font-black text-emerald-700 truncate">{selectedFiles[field.fieldLabel]}</p>
+                          <span className="text-[9px] font-bold text-emerald-600 uppercase">Ready for transmission</span>
+                        </div>
                       ) : (
-                        <>
-                          <Upload className="w-8 h-8 text-blue-400 group-hover:text-blue-600 mb-2 transition-colors" />
-                          <p className="text-sm font-extrabold text-blue-700">Click or drag file to upload</p>
-                          <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Allowed: {(field.options || []).join(', ') || 'Any'} • MAX {field.maxLength || 5}MB</p>
-                        </>
+                        <div className="space-y-1">
+                          <Upload className="w-7 h-7 text-blue-500 mx-auto" />
+                          <p className="text-xs font-black text-blue-700">Click or Drag file to attach</p>
+                          <p className="text-[9px] font-bold text-slate-400">Max size: {field.maxLength || 5}MB</p>
+                        </div>
                       )}
                     </div>
                   )}
@@ -1090,36 +1636,33 @@ export default function StudentDashboard() {
               );
             })}
 
-            {/* --- STRICT OFFICIAL DECLARATION (Mandatory to check) --- */}
+            {/* Strict Declaration Checkbox */}
             {selectedForm.hasDeclaration && (
-              <div className="mt-10 p-6 rounded-2xl clay-card bg-amber-50/40 border border-amber-200 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-2 h-full bg-amber-500"></div>
-                <div className="flex items-start gap-4">
-                  <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-1" />
-                  <label className="flex items-start gap-3.5 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      required
-                      checked={declarationAccepted}
-                      onChange={(e) => setDeclarationAccepted(e.target.checked)}
-                      className="mt-1 w-6 h-6 text-amber-600 rounded border-amber-300 focus:ring-amber-500 shadow-sm cursor-pointer shrink-0" 
-                    />
-                    <span className="text-sm font-medium text-slate-700 leading-relaxed">
-                      <strong className="text-amber-800 font-extrabold block mb-1">Strict Official Declaration:</strong> 
-                      {selectedForm.declarationText || "I agree to the terms and conditions."}
-                    </span>
-                  </label>
-                </div>
+              <div className="clay-card p-4 rounded-2xl bg-amber-50/50 border border-amber-200 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    required
+                    checked={declarationAccepted}
+                    onChange={(e) => setDeclarationAccepted(e.target.checked)}
+                    className="w-4 h-4 text-amber-600 rounded cursor-pointer mt-0.5" 
+                  />
+                  <span className="text-xs font-semibold text-slate-700 leading-relaxed">
+                    <strong className="text-amber-900 font-black block mb-0.5">Strict Official Declaration:</strong> 
+                    {selectedForm.declarationText || "I confirm that all provided details and media submissions are authentic."}
+                  </span>
+                </label>
               </div>
             )}
-            
-            <div className="pt-6 mt-8 border-t border-slate-200">
+
+            <div className="pt-4 border-t border-blue-200/50">
               <button 
                 type="submit" 
                 disabled={formLoading || (selectedForm.hasDeclaration && !declarationAccepted)} 
-                className="clay-btn-primary w-full py-5 text-sm sm:text-base font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-transform hover:scale-[1.01]"
+                className="clay-btn-primary w-full py-4 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
               >
-                {formLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Submit Secure Application"} 
+                {formLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Application Form"} 
               </button>
             </div>
           </form>
@@ -1127,90 +1670,179 @@ export default function StudentDashboard() {
       )}
 
       {/* ========================================================= */}
-      {/* VIEW 7: ATTENDANCE SCANNER & CODE MODULE (SPA)            */}
+      {/* VIEW 6: ATTENDANCE SCANNER & PIN VERIFICATION TERMINAL     */}
       {/* ========================================================= */}
       {currentView === "ATTENDANCE" && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 20 }} className="max-w-3xl mx-auto clay-card p-6 sm:p-10 overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-purple-100/40 rounded-full blur-[80px] pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
-          
-          <div className="relative z-10 mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-200 pb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-lg ring-4 ring-purple-100">
-                <ScanLine className="w-8 h-8" />
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.98 }} 
+          animate={{ opacity: 1, scale: 1 }} 
+          className="max-w-2xl mx-auto clay-card p-6 sm:p-10 space-y-6 border border-white shadow-xl"
+        >
+          <div className="flex items-center justify-between pb-5 border-b border-blue-200/50">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-lg">
+                <ScanLine className="w-6 h-6" />
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase text-purple-600 tracking-widest bg-purple-100 border border-purple-200 px-3 py-1 rounded-full">Secure Check-in</span>
-                <h2 className="text-2xl sm:text-3xl font-black text-[#0F2547] mt-2">Mark Attendance</h2>
+                <span className="text-[9px] font-black uppercase text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-full">Secure Check-in</span>
+                <h2 className="text-xl font-black text-[#0F2547] mt-0.5">Mark Event Attendance</h2>
               </div>
             </div>
-            <button onClick={() => setCurrentView("DASHBOARD")} className="clay-btn px-5 py-2.5 text-xs font-bold text-slate-600 flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors shrink-0 shadow-sm border border-slate-200">
-              <ChevronLeft className="w-4 h-4" /> Go Back
+
+            <button 
+              onClick={() => setCurrentView("DASHBOARD")} 
+              className="clay-btn px-4 py-2 text-xs font-black text-slate-700 hover:text-blue-600 shadow-sm"
+            >
+              Cancel
             </button>
           </div>
 
-          <div className="relative z-10 space-y-8">
-            {!activeSession ? (
-              <div className="bg-white border-2 border-slate-100 rounded-3xl p-10 text-center shadow-sm flex flex-col items-center">
-                <ScanLine className="w-12 h-12 text-slate-300 mb-4"/>
-                <h3 className="text-lg font-extrabold text-slate-700">No Active Session</h3>
-                <p className="text-xs text-slate-500 mt-2 font-medium">There is no live attendance session running currently. Please wait for the coordinator to launch it.</p>
+          {!activeSession ? (
+            <div className="clay-inset p-10 text-center rounded-3xl space-y-2">
+              <ScanLine className="w-10 h-10 text-slate-300 mx-auto" />
+              <h4 className="text-base font-black text-[#0F2547]">No Live Attendance Session Active</h4>
+              <p className="text-xs text-slate-500 font-semibold max-w-sm mx-auto">
+                Coordination team has not opened an active attendance terminal right now. Please wait for the announcement.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="text-center">
+                <span className="clay-badge-blue text-[9px] font-black px-3 py-1 rounded-full uppercase">BROADCASTING LIVE</span>
+                <h3 className="text-lg font-black text-[#0F2547] mt-1">{activeSession.title}</h3>
               </div>
-            ) : (
-              <>
-                <div className="text-center mb-6">
-                   <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-purple-200 inline-block mb-2">LIVE SESSION</span>
-                   <h3 className="text-xl font-extrabold text-[#0F2547]">{activeSession.title}</h3>
-                </div>
-                
-                {/* Mode is forced by admin. Only show the relevant UI */}
-                <div className="bg-white border-2 border-slate-100 rounded-3xl p-8 shadow-sm">
-                  <AnimatePresence mode="wait">
-                    {activeSession.mode === "QR" ? (
-                      <motion.div key="qr" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col items-center justify-center space-y-6">
-                        <div className="relative w-full max-w-[280px] aspect-square bg-slate-900 border-4 border-slate-800 rounded-3xl flex items-center justify-center overflow-hidden shadow-inner">
-                          {isScanning ? (
-                            <div id="qr-reader" className="w-full h-full [&>video]:object-cover [&>video]:w-full [&>video]:h-full" />
-                          ) : (
-                            <div className="text-center space-y-2 bg-slate-50 w-full h-full flex flex-col justify-center items-center">
-                              <QrCode className="w-12 h-12 text-slate-300 mx-auto" />
-                              <p className="text-xs font-bold text-slate-400">Camera Off</p>
-                            </div>
-                          )}
-                        </div>
-                        <button onClick={() => setIsScanning(!isScanning)} className="clay-btn-primary bg-purple-600 hover:bg-purple-700 w-full py-4 text-sm font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg">
-                          {isScanning ? "Stop Scanner" : "Activate Camera Scanner"}
-                        </button>
-                      </motion.div>
+
+              {activeSession.mode === "QR" ? (
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div className="w-full max-w-[280px] aspect-square rounded-3xl bg-slate-900 border-4 border-slate-800 flex items-center justify-center overflow-hidden shadow-inner">
+                    {isScanning ? (
+                      <div id="qr-reader" className="w-full h-full [&>video]:object-cover [&>video]:w-full [&>video]:h-full" />
                     ) : (
-                      <motion.div key="code" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6 max-w-sm mx-auto">
-                        <div className="text-center">
-                          <div className="w-16 h-16 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-purple-100 shadow-inner">
-                            <KeyRound className="w-8 h-8" />
-                          </div>
-                          <h3 className="text-lg font-black text-[#0F2547]">Enter Secret Code</h3>
-                          <p className="text-xs text-slate-500 font-medium mt-1">Ask the coordinator for the session code.</p>
-                        </div>
-                        <div>
-                          <input 
-                            type="text" 
-                            value={attendanceCode}
-                            onChange={(e) => setAttendanceCode(e.target.value.toUpperCase())}
-                            placeholder="e.g. CYBER2026" 
-                            className="clay-input w-full px-6 py-4 text-center text-xl font-black tracking-[0.2em] text-purple-900 focus:ring-2 focus:ring-purple-500 transition-shadow uppercase"
-                          />
-                        </div>
-                        <button 
-                          onClick={() => handleMarkAttendance()}
-                          disabled={loading === "attendance" || !attendanceCode.trim()} 
-                          className="clay-btn-primary bg-purple-600 hover:bg-purple-700 w-full py-4 text-sm font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
-                        >
-                          {loading === "attendance" ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify & Mark Present"}
-                        </button>
-                      </motion.div>
+                      <div className="text-center space-y-2 p-6">
+                        <QrCode className="w-12 h-12 text-slate-400 mx-auto" />
+                        <p className="text-xs font-bold text-slate-400">Camera Inactive</p>
+                      </div>
                     )}
-                  </AnimatePresence>
+                  </div>
+
+                  <button 
+                    onClick={() => setIsScanning(!isScanning)} 
+                    className="clay-btn-primary w-full py-3.5 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>{isScanning ? "Stop Camera Scanner" : "Activate Camera Scanner"}</span>
+                  </button>
                 </div>
-              </>
+              ) : (
+                <div className="space-y-4 max-w-sm mx-auto text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-700 flex items-center justify-center mx-auto shadow-inner">
+                    <KeyRound className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-black text-[#0F2547]">Enter 6-Char Session Code</h4>
+                  <input 
+                    type="text" 
+                    value={attendanceCode}
+                    onChange={(e) => setAttendanceCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. CYBER6" 
+                    className="clay-input w-full px-4 py-3 text-center text-lg font-black tracking-widest uppercase text-purple-900"
+                  />
+                  <button 
+                    onClick={() => handleMarkAttendance()}
+                    disabled={loading === "attendance" || !attendanceCode.trim()} 
+                    className="clay-btn-primary w-full py-3.5 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
+                  >
+                    {loading === "attendance" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Mark Present"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* ========================================================= */}
+      {/* VIEW 7: FULL ACTIVITY TIMELINE LOG (SPA VIEW)             */}
+      {/* ========================================================= */}
+      {currentView === "ACTIVITY_LOG" && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto clay-card p-6 sm:p-10 space-y-6 border border-white shadow-xl">
+          <div className="flex items-center justify-between pb-5 border-b border-blue-200/50">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
+                <HistoryIcon className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-[#0F2547]">Verified Student Activity History</h2>
+                <p className="text-xs text-slate-500 font-semibold mt-0.5">Complete record of your club presence and applications.</p>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setCurrentView("DASHBOARD")} 
+              className="clay-btn px-4 py-2 text-xs font-black text-slate-700 hover:text-blue-600 shadow-sm"
+            >
+              Back
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {attendances.map((att, idx) => (
+              <div key={idx} className="clay-card p-4 rounded-2xl border border-white flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                    <ScanLine className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black text-purple-700 uppercase bg-purple-50 px-2 py-0.5 rounded">Attendance Log</span>
+                    <h5 className="text-xs font-black text-[#0F2547] mt-0.5">{att.eventName}</h5>
+                    <p className="text-[10px] text-slate-400 font-semibold">{new Date(att.date).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  Verified
+                </span>
+              </div>
+            ))}
+
+            {data?.mainApp && (
+              <div className="clay-card p-4 rounded-2xl border border-white flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                    <Award className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black text-amber-800 uppercase bg-amber-50 px-2 py-0.5 rounded">Core Presenter Submission</span>
+                    <h5 className="text-xs font-black text-[#0F2547] mt-0.5">{data.mainApp.topicInterested}</h5>
+                    <p className="text-[10px] text-slate-400 font-semibold">{new Date(data.mainApp.appliedAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
+                  {data.mainApp.status}
+                </span>
+              </div>
+            )}
+
+            {data?.otherResponses?.map((res: any, idx: number) => (
+              <div key={idx} className="clay-card p-4 rounded-2xl border border-white flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black text-blue-700 uppercase bg-blue-50 px-2 py-0.5 rounded">Event Intake</span>
+                    <h5 className="text-xs font-black text-[#0F2547] mt-0.5">{res.form?.title || "Intake Form"}</h5>
+                    <p className="text-[10px] text-slate-400 font-semibold">{new Date(res.submittedAt || Date.now()).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  Recorded in Vault
+                </span>
+              </div>
+            ))}
+
+            {!data?.mainApp && (!data?.otherResponses || data?.otherResponses.length === 0) && attendances.length === 0 && (
+              <div className="clay-inset p-8 text-center text-xs font-bold text-slate-400 rounded-2xl">
+                No verified records found yet.
+              </div>
             )}
           </div>
         </motion.div>

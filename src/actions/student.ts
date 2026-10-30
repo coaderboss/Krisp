@@ -75,7 +75,8 @@ export async function nudgeAdmin(applicationId: string) {
     });
     
     revalidatePath("/dashboard");
-    return { success: true, message: "The administration team has been notified. Your profile is highlighted." };
+    // Gamified response matching user requirement
+    return { success: true, message: "Priority Alert dispatched! The executive team has seen your nudge. We will review your application shortly." };
   } catch (error) {
     return { error: "Failed to send the nudge request. Please try again later." };
   }

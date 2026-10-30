@@ -410,15 +410,17 @@ export async function fetchAllApplications() {
 export async function deleteVaultEntry(id: string, isMaster: boolean) {
   await requireSupremeAdmin();
   try {
-    if (isMaster) {
+    // 🟢 SMART DELETE: Try both tables regardless of isMaster to prevent "Record not found" crashes on plugged forms
+    try {
       await prisma.application.delete({ where: { id } });
-    } else {
+    } catch {
       await prisma.formResponse.delete({ where: { id } });
     }
     revalidatePath("/admin");
     return { success: true, message: "Record permanently purged from database." };
   } catch (error) {
-    return { error: "Action failed." };
+    console.error("Delete Vault Error:", error);
+    return { error: "Failed to delete. Record might have already been removed." };
   }
 }
 
@@ -426,15 +428,17 @@ export async function deleteVaultEntry(id: string, isMaster: boolean) {
 export async function allowReattempt(id: string, isMaster: boolean) {
   await requireSupremeAdmin(); // 🟢 SECURITY FIX: Prevent unauthorized data deletion by Executives
   try {
-    if (isMaster) {
+    // 🟢 SMART DELETE: Same fallback logic ensures the student is successfully unlocked
+    try {
       await prisma.application.delete({ where: { id } });
-    } else {
+    } catch {
       await prisma.formResponse.delete({ where: { id } });
     }
     revalidatePath("/admin");
     return { success: true, message: "Entry cleared. Student can now resubmit." };
   } catch (error) {
-    return { error: "Failed to process reattempt." };
+    console.error("Reattempt Vault Error:", error);
+    return { error: "Failed to process reattempt. Please try again." };
   }
 }
 

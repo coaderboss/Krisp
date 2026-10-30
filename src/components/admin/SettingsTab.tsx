@@ -7,10 +7,10 @@ import {
   Download, Database, Settings, Send, Eye, EyeOff, FolderKanban, ChevronLeft, ChevronDown, ChevronRight, Globe, Lock, 
   Hash, LayoutTemplate, FileText, PenTool, LayoutPanelLeft, MousePointerSquareDashed, Play, Bold, Italic, 
   ListOrdered, Heading, AlertTriangle, ArrowUp, ArrowDown, MonitorPlay, Camera, Link as LinkIcon,
-  PlugZap, Plug, Palette
+  PlugZap, Plug, Palette, RotateCcw, Bell
 } from "lucide-react";
 import { getAllFormsAdmin, saveCompleteForm, plugFormToWorkflow, unplugFormFromWorkflow } from "@/actions/settings";
-import { fetchAllApplications, allowReattempt, deleteVaultEntry } from "@/actions/admin";
+import { fetchAllApplications, allowReattempt, deleteVaultEntry, sendDirectEmail } from "@/actions/admin";
 
 // 🟢 SECURITY FIX: Robust Zero-Dependency XSS Sanitizer for Admin Previews (CWE-79)
 const DOMPurify = {
@@ -592,9 +592,10 @@ export default function SettingsTab() {
               )}
 
               {builderView === "FIELDS" && (
-                <div className="max-w-2xl mx-auto space-y-6 pb-20">
-                  <div className="text-center mb-8">
-                    <h3 className="text-2xl font-extrabold text-[#0F2547]">{activeForm.title}</h3>
+                // Changed from max-w-3xl to max-w-4xl to ensure form canvas spans beautifully
+                <div className="max-w-4xl w-full mx-auto space-y-6 pb-20 px-4 sm:px-6 lg:px-12">
+                  <div className="text-center mb-10 mt-4">
+                    <h3 className="text-3xl font-extrabold text-[#0F2547]">{activeForm.title}</h3>
                     <p className="text-sm text-slate-500 mt-2">{activeForm.description || "Add a description in Settings"}</p>
                   </div>
                   {activeForm.questions?.map((field: any) => (
@@ -1005,8 +1006,9 @@ export default function SettingsTab() {
               <thead className="bg-slate-100 text-[10px] uppercase font-black text-slate-500">
                 <tr>
                   <th className="p-3">Applicant Name</th>
-                  {pinnedFields.map((pf: any) => <th key={pf.id} className="p-3 text-amber-700">📌 {pf.fieldLabel}</th>)}
-                  <th className="p-3">Applied On</th>
+                  {pinnedFields.map((pf: any) => <th key={pf.id} className="p-3 text-amber-700 whitespace-nowrap">📌 {pf.fieldLabel}</th>)}
+                  <th className="p-3 whitespace-nowrap">Applied On</th>
+                  {isAdmin && <th className="p-3 text-right whitespace-nowrap">Admin Actions</th>}
                 </tr>
               </thead>
               <tbody className="text-xs text-slate-700 font-medium">
@@ -1028,7 +1030,79 @@ export default function SettingsTab() {
                           ) : "-"}
                         </td>
                       ))}
-                      <td className="p-3 text-slate-400">{res.date}</td>
+                      <td className="p-3 text-slate-400 whitespace-nowrap">{res.date}</td>
+                      
+                      {/* 🟢 STRICTLY ADMIN ONLY ACTIONS: Delete, Reattempt, Nudge */}
+                      {isAdmin && (
+                        <td className="p-3 text-right">
+                          {/* Removing opacity-0 group-hover:opacity-100 so buttons are ALWAYS visible to Admin */}
+                          <div className="flex items-center justify-end gap-1.5 transition-opacity">
+                            
+                            {/* NUDGE BUTTON */}
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if(confirm("Send a gentle nudge/reminder email to this student?")) {
+                                  setLoading(`nudge_${res.id}`);
+                                  const htmlBody = `<div style="font-family: Arial; padding: 20px;"><h2 style="color: #0F2547;">Action Required</h2><p>Hello ${res.name},</p><p>This is an official nudge/reminder from the Executive Board of the UIET Cybersecurity Club regarding your recent application in the Data Vault. Please complete any pending steps or check your dashboard.</p></div>`;
+                                  const response = await sendDirectEmail(res.email, "Official Action Required: Cybersecurity Club", htmlBody);
+                                  if(response.success) notify("Nudge email sent successfully.", "success");
+                                  else notify(response.error || "Failed to send nudge.", "error");
+                                  setLoading("");
+                                }
+                              }}
+                              disabled={loading.startsWith("nudge")}
+                              className="p-1.5 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-colors shadow-sm"
+                              title="Send Nudge Email"
+                            >
+                              <Bell className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* REATTEMPT BUTTON */}
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if(confirm("Allow reattempt? This will clear their current submission and unlock the form.")) {
+                                  setLoading(`reattempt_${res.id}`);
+                                  const response = await allowReattempt(res.id, res.formId === "master");
+                                  if(response.success) {
+                                    notify(response.message || "Reattempt allowed.", "success");
+                                    setStudentResponses(prev => prev.filter(r => r.id !== res.id));
+                                  } else notify(response.error || "Action failed.", "error");
+                                  setLoading("");
+                                }
+                              }}
+                              disabled={loading.startsWith("reattempt")}
+                              className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors shadow-sm"
+                              title="Allow Reattempt"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* DELETE BUTTON */}
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if(confirm("Permanently delete this vault entry?")) {
+                                  setLoading(`delete_${res.id}`);
+                                  const response = await deleteVaultEntry(res.id, res.formId === "master");
+                                  if(response.success) {
+                                    notify(response.message || "Entry deleted.", "success");
+                                    setStudentResponses(prev => prev.filter(r => r.id !== res.id));
+                                  } else notify(response.error || "Deletion failed.", "error");
+                                  setLoading("");
+                                }
+                              }}
+                              disabled={loading.startsWith("delete")}
+                              className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors shadow-sm"
+                              title="Delete Record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   )
                 }) : <tr><td colSpan={10} className="p-8 text-center text-slate-400 font-bold">No submissions found.</td></tr>}
@@ -1049,19 +1123,35 @@ export default function SettingsTab() {
               </div>
               <button onClick={() => setSelectedResponseIndex(null)} className="w-8 h-8 bg-slate-100 hover:bg-red-100 hover:text-red-600 rounded-full font-bold flex items-center justify-center">✕</button>
             </div>
-            <div className="p-6 overflow-y-auto space-y-4 bg-slate-50/30 flex-1">
+            <div className="p-6 overflow-y-auto space-y-4 bg-slate-50/50 flex-1 custom-scrollbar">
                {(() => {
                   const currentRes = studentResponses.filter(r => r.formId === vaultFormId)[selectedResponseIndex];
-                  let parsedData = {}; try { parsedData = JSON.parse(currentRes.dynamicData || "{}"); } catch (e) {}
-                  return Object.entries(parsedData).filter(([k]) => !k.startsWith('$ACTION_')).map(([key, value], i) => (
-                    <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{key}</span>
+                  let parsedData = {}; 
+                  try { 
+                    parsedData = typeof currentRes.dynamicData === 'string' 
+                      ? JSON.parse(currentRes.dynamicData) 
+                      : currentRes.dynamicData || {}; 
+                  } catch (e) {}
+                  
+                  const validEntries = Object.entries(parsedData).filter(([k, v]) => !k.startsWith('$ACTION_') && v !== null && v !== "");
+
+                  if(validEntries.length === 0) {
+                     return <div className="text-center text-slate-400 text-xs font-bold py-10">No dynamic responses recorded.</div>;
+                  }
+
+                  return validEntries.map(([key, value], i) => (
+                    <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-blue-200 transition-colors">
+                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-wider mb-1 block">{key}</span>
                       {String(value).startsWith("http") ? (
                         <div className="mt-1.5"><a href={String(value)} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-1.5"><LinkIcon className="w-4 h-4"/> Open in Google Drive</a></div>
                       ) : String(value).startsWith("data:application/pdf") || String(value).startsWith("data:image/") ? (
                         <div className="mt-1.5"><a href={String(value)} download={`${key.replace(/\s+/g, '_')}`} className="text-sm font-bold text-emerald-600 hover:underline flex items-center gap-1.5"><Download className="w-4 h-4"/> Download Attached Document</a></div>
                       ) : (
-                        <p className="text-sm font-bold mt-1.5 text-slate-800 leading-relaxed">{Array.isArray(value) ? value.join(", ") : String(value)}</p>
+                        <p className="text-sm font-bold mt-1.5 text-slate-800 leading-relaxed">
+                           {Array.isArray(value) 
+                             ? <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded">{value.join(", ")}</span> 
+                             : String(value)}
+                        </p>
                       )}
                     </div>
                   ));
