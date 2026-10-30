@@ -72,7 +72,18 @@ export default async function HomePage() {
     if (globalMedia?.mediaUrls) {
       const parsedUrls = JSON.parse(globalMedia.mediaUrls);
       if (Array.isArray(parsedUrls) && parsedUrls.length > 0) {
-        officialReelUrl = parsedUrls[0]; // Use the first active media URL provided by Admin
+        // Extract exact URL whether it's saved as string or object {type, url}
+        const firstItem = parsedUrls[0];
+        const rawUrl = typeof firstItem === "object" && firstItem.url ? firstItem.url : firstItem;
+        
+        // Auto-format Instagram URLs for strict iframe embedding
+        if (rawUrl && typeof rawUrl === "string") {
+          if (rawUrl.includes("instagram.com") && !rawUrl.includes("/embed")) {
+            officialReelUrl = rawUrl.split("?")[0].replace(/\/$/, "") + "/embed/";
+          } else {
+            officialReelUrl = rawUrl;
+          }
+        }
       }
     }
   } catch (e) {

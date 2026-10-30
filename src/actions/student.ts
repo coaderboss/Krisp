@@ -123,6 +123,12 @@ export async function submitStudentForm(formData: FormData) {
     if (value instanceof File) {
       if (!value.name || value.name === "undefined" || value.size === 0) continue;
 
+      // 🟢 P0 SECURITY FIX: Strict Memory DoS Protection (Max 5MB per file enforced at Server level)
+      const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+      if (value.size > MAX_FILE_SIZE) {
+        return { error: `Upload Failed: File '${value.name}' exceeds the strict 5MB limit.` };
+      }
+
       try {
         const arrayBuffer = await value.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
@@ -165,7 +171,8 @@ export async function submitStudentForm(formData: FormData) {
       await prisma.application.create({
         data: {
           userId: session.user.id,
-          topicInterested: rawData["Choose your preffered topic"]?.toString() || rawData["Topic"]?.toString() || "Bulletin Core",
+          // 🟢 P2 DATA FIX: Handling typo variants in dynamic form questions
+          topicInterested: rawData["Choose your preferred topic"]?.toString() || rawData["Choose your preffered topic"]?.toString() || rawData["Topic"]?.toString() || "Bulletin Core",
           dynamicData: JSON.stringify(rawData), 
           highlightedData: Object.keys(highlightedDataObj).length > 0 ? JSON.stringify(highlightedDataObj) : null,
           status: "WAITING"

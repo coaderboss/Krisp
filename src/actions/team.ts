@@ -4,11 +4,17 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
-// Guard: Only CLUB_ADMIN can access
+// 🟢 P1 SECURITY FIX: DB Guard: Only CLUB_ADMIN can access
 async function requireAdmin() {
   const session = await auth();
   if (session?.user?.role !== "CLUB_ADMIN") {
     throw new Error("Unauthorized: Supreme Admin rights required.");
+  }
+  
+  // Real-time Database Check to prevent stale token usage
+  const dbUser = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true, isBlacklisted: true } });
+  if (!dbUser || dbUser.isBlacklisted || dbUser.role !== "CLUB_ADMIN") {
+    throw new Error("Security Alert: Supreme Admin access has been revoked or account is suspended.");
   }
   return session;
 }

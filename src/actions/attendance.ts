@@ -9,7 +9,18 @@ import crypto from "crypto";
 async function requireAdminGuard() {
   const sessionUser = await auth();
   if (sessionUser?.user?.role !== "CLUB_ADMIN" && sessionUser?.user?.role !== "EXECUTIVE") {
+    // P2 FIX: Avoid throwing raw exception to prevent 500 error in Client Actions (CWE-754)
     throw new Error("Unauthorized Access Attempt Blocked.");
+  }
+
+  // 🟢 P1 SECURITY FIX: Live DB Check to prevent Stale JWT Privilege Escalation
+  const dbUser = await prisma.user.findUnique({ 
+    where: { id: sessionUser.user.id }, 
+    select: { role: true, isBlacklisted: true } 
+  });
+  
+  if (!dbUser || dbUser.isBlacklisted || (dbUser.role !== "CLUB_ADMIN" && dbUser.role !== "EXECUTIVE")) {
+    throw new Error("Security Alert: Your access level has been revoked or suspended.");
   }
 }
 

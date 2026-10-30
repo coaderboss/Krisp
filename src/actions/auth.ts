@@ -245,6 +245,14 @@ export async function resetPassword(formData: FormData) {
 
     if (!token || !password) return { error: "Invalid request payload." };
 
+    // 🟢 P2 SECURITY FIX: Enforce same strong regex on password resets (CWE-521)
+    const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$\%^&*]).{8,25}$/;
+    if (!strongPasswordRegex.test(password)) {
+      return { 
+        error: "Password must be between 8 and 25 characters, and include at least 1 uppercase letter and 1 special character (!@#$%^&*)." 
+      };
+    }
+
     // 1. Find user with matching token that has NOT expired
     const user = await prisma.user.findFirst({
       where: {

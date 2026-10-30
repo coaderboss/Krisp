@@ -12,6 +12,13 @@ async function requireAdmin() {
   if (session?.user?.role !== "CLUB_ADMIN" && session?.user?.role !== "EXECUTIVE") {
     throw new Error("Unauthorized: Appropriate rights required.");
   }
+  
+  // 🟢 P1 SECURITY FIX: Live DB Check to prevent Stale JWT Privilege Escalation
+  const dbUser = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true, isBlacklisted: true } });
+  if (!dbUser || dbUser.isBlacklisted || (dbUser.role !== "CLUB_ADMIN" && dbUser.role !== "EXECUTIVE")) {
+    throw new Error("Security Alert: Your access level has been revoked or suspended.");
+  }
+  
   return session;
 }
 
@@ -21,6 +28,13 @@ async function requireSupremeAdmin() {
   if (session?.user?.role !== "CLUB_ADMIN") {
     throw new Error("Security Alert: Only Supreme Admin can perform this action.");
   }
+  
+  // 🟢 P1 SECURITY FIX: Live DB validation for Supreme Admin
+  const dbUser = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true, isBlacklisted: true } });
+  if (!dbUser || dbUser.isBlacklisted || dbUser.role !== "CLUB_ADMIN") {
+    throw new Error("Security Alert: Supreme Admin access has been revoked.");
+  }
+  
   return session;
 }
 

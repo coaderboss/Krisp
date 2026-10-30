@@ -23,10 +23,16 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
-  // SECURITY FIX: Never cache dynamic API routes, auth sessions, or TRPC endpoints
+  // 🟢 P2 SECURITY FIX: Never cache APIs AND Sensitive HTML Routes (CWE-524)
   const url = new URL(event.request.url);
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/data/')) {
-      return; // Let the browser handle these normally, bypassing SW cache completely
+  if (
+      url.pathname.startsWith('/api/') || 
+      url.pathname.startsWith('/_next/data/') ||
+      url.pathname.startsWith('/dashboard') ||
+      url.pathname.startsWith('/admin') ||
+      url.pathname.startsWith('/executive')
+  ) {
+      return; // Fall back to network (no cache for private routes)
   }
 
   event.respondWith(

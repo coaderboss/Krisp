@@ -64,6 +64,10 @@ model User {
   formResponses     FormResponse[]
   attendanceRecords AttendanceRecord[]
   pushSubscriptions PushSubscription[]
+
+  // 🟢 P1 SCALABILITY FIX: Fast executive directory & clearance scanning
+  @@index([role, isApproved])
+  @@index([email])
 }
 
 // ==========================================
@@ -169,6 +173,11 @@ model Application {
 
   weeklySlot      WeeklySlot?    @relation(fields: [weeklySlotId], references: [id])
   weeklySlotId    String?
+
+  // 🟢 P1 SCALABILITY FIX: Indexes for High-Concurrency Lookups & Auto-Queue Sorting
+  @@index([status, appliedAt])
+  @@index([weeklySlotId])
+  @@index([userId])
 }
 
 // Weekly Slot Management
@@ -194,6 +203,9 @@ model AdminRequest {
   payload     String    @db.Text // JSON configuration
   status      ReqStatus @default(PENDING)
   createdAt   DateTime  @default(now())
+
+  // 🟢 P1 SCALABILITY FIX: Fast fetching of pending executive requests
+  @@index([status, executiveId])
 }
 
 model ClubSettings {
